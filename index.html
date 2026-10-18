@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F6">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FAF9F6'/%3E%3Cpath d='M8 17 C11 20 12 22 14 25 C17 16 22 10 27 6' fill='none' stroke='%233A7D44' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>AARAMBH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@500;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* Layout: one ivory notebook page. Top bars (time machine, level), then a split view:
+   left = the hour you are in, right = what comes next plus the full day list.
+   Single light theme by choice: a calm porcelain page with pencil-grey ink and one moss green. */
+:root{
+  --paper:#FAF9F6;
+  --card:#FFFDF8;
+  --ink:#2C2B27;
+  --ink-2:#4F4C45;
+  --ink-3:#6F6B60;
+  --line:rgba(44,43,39,.28);
+  --rule:#E4DFD0;
+  --grid:rgba(110,100,75,.08);
+  --moss:#3A7D44;
+  --moss-dark:#245A2E;
+  --moss-bg:#E6F0E2;
+  --marker:#FCEFA9;
+  --amber-bg:#FCF0D0;
+  --amber-line:#DDAE40;
+  --amber-ink:#5C3B00;
+  --hand:'Caveat','Bradley Hand','Segoe Print',cursive;
+  --note:'Architects Daughter','Comic Sans MS','Chalkboard SE',sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--note);font-size:16px;line-height:1.5;color:var(--ink);
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  padding-block:20px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3,p,ul,figure{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid rgba(58,125,68,.6);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.page{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:14px 20px;flex-wrap:wrap}
+.wordmark{font-family:var(--hand);font-weight:700;font-size:clamp(46px,10vw,72px);letter-spacing:.07em;line-height:1;position:relative;display:inline-block}
+.uline{display:block;width:78%;height:14px;margin-top:2px;color:var(--moss)}
+.tag{font-family:var(--serif);font-style:italic;color:var(--ink-2);font-size:15px;margin-top:8px;max-width:46ch}
+
+/* buttons, chips */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:8px 14px;cursor:pointer;
+  font-family:var(--note);font-size:15px;line-height:1.2;background:var(--card);color:var(--ink);
+  border:1.5px solid var(--ink);border-radius:12px 16px 11px 15px/15px 11px 16px 12px;transition:background .15s,transform .1s}
+.btn:hover{background:#F4F0E4}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--moss);border-color:var(--moss-dark);color:#fff}
+.btn.primary:hover{background:#34723D}
+.btn.ghost{border-style:dashed}
+.btn.danger{background:#F8E3DD;border-color:#8F2E1F;color:#6E1F14}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.score{font-family:var(--hand);font-weight:700;font-size:22px;line-height:1;padding:2px 8px;background:var(--marker);border-radius:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:6px 12px;cursor:pointer;font-family:var(--note);font-size:14px;
+  background:var(--card);border:1.5px dashed var(--ink-2);border-radius:11px 14px 10px 13px/13px 10px 14px 11px;transition:background .15s}
+.chip:hover{background:#F4F0E4}
+.chip.on{background:var(--marker);border-style:solid;border-color:var(--ink)}
+.icon-btn{display:inline-grid;place-items:center;width:40px;height:40px;padding:0;background:transparent;border:0;border-radius:10px;cursor:pointer;color:var(--ink)}
+.icon-btn:hover{background:#F1EDE0}
+.icon-btn.sq{border:1.5px solid var(--line);background:#fff;width:36px;height:36px}
+.field{font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:10px 12px 9px 11px;padding:8px 10px;min-height:42px;width:100%;min-width:0}
+textarea.field{resize:vertical;min-height:84px}
+.field:focus-visible{outline-offset:1px}
+
+/* cards */
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:16px 20px 14px 22px/20px 14px 22px 16px;padding:20px;
+  box-shadow:0 1px 0 rgba(60,50,20,.05),0 14px 24px -18px rgba(70,60,30,.35);min-width:0}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.sec-head h2{font-family:var(--hand);font-size:32px;font-weight:700;line-height:1.1}
+.hint{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-3)}
+.lbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.soft{color:var(--ink-2)}
+
+/* time machine */
+.tm{display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px;background:#F6F2E6;border:1.5px dashed rgba(44,43,39,.45);border-radius:14px;padding:12px 16px}
+.tm-clock{display:flex;flex-direction:column;gap:2px}
+.clock{font-family:var(--hand);font-size:36px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.tm-main{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.tm-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.tm-state{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-2)}
+.tm-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tm-custom{display:inline-block;width:132px}
+.tm-custom .field{min-height:38px;padding:5px 8px;font-size:15px}
+
+/* level */
+.level{display:flex;flex-direction:column;gap:10px}
+.level-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 16px}
+.level-name{font-family:var(--hand);font-size:34px;font-weight:700;line-height:1}
+.level-name small{font-family:var(--serif);font-style:italic;font-size:15px;font-weight:400;color:var(--ink-2);margin-left:8px}
+.nums{font-family:var(--serif);font-size:14px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bar{height:16px;background:#EDE8DA;border:1.5px solid rgba(44,43,39,.5);border-radius:9px 7px 10px 6px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:inherit;transition:width .6s ease;
+  background:repeating-linear-gradient(-45deg,var(--moss) 0 6px,#4A8F55 6px 12px)}
+.bar.thin{height:10px}
+.today-line{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:15px}
+.today-line b{font-family:var(--hand);font-size:24px;font-weight:700;color:var(--moss-dark)}
+
+/* banner */
+.banner{display:flex;gap:12px;align-items:flex-start;background:var(--amber-bg);border:1.5px solid var(--amber-line);color:var(--amber-ink);
+  border-radius:14px 18px 13px 17px/17px 13px 18px 14px;padding:14px 16px}
+.banner h2{font-family:var(--hand);font-size:30px;font-weight:700;line-height:1.1;color:#7A4B00}
+.banner p{font-size:15px;margin-top:2px}
+.banner small{display:block;margin-top:6px;font-family:var(--serif);font-style:italic;font-size:13px}
+
+/* split */
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.col-left,.col-right{display:flex;flex-direction:column;gap:20px;min-width:0}
+@media (min-width:900px){.split{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:start}}
+
+/* current block */
+.cur{display:flex;flex-direction:column;gap:14px}
+.cur-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.cur-actions{display:flex;flex-wrap:wrap;gap:8px}
+.badge{display:inline-block;font-family:var(--hand);font-weight:700;font-size:22px;line-height:1;padding:4px 12px 5px;border:1.5px solid var(--ink);
+  border-radius:12px 9px 13px 8px/9px 13px 8px 12px;background:#fff}
+.badge.live{background:var(--marker)}
+.cur-body{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start}
+@media (min-width:1180px){.cur-body{grid-template-columns:minmax(0,1fr) 300px}}
+.cur-info{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cur-time{font-family:var(--serif);font-style:italic;color:var(--ink-2);font-size:15px}
+.cur-title{font-family:var(--hand);font-weight:700;font-size:clamp(36px,6vw,48px);line-height:1.04;text-wrap:balance}
+.pills{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.xp{display:inline-flex;align-items:center;font-family:var(--hand);font-weight:700;font-size:22px;line-height:1;padding:3px 11px 4px;
+  border:1.5px solid var(--moss);color:var(--moss-dark);background:var(--moss-bg);border-radius:14px 10px 15px 9px/10px 15px 9px 14px;white-space:nowrap}
+.xp.sm{font-size:18px;padding:2px 8px 3px}
+.tag-photo{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);border:1.5px dashed rgba(44,43,39,.45);border-radius:10px;padding:2px 9px}
+.desc{color:var(--ink-2);max-width:60ch}
+.countbox{display:flex;flex-direction:column;gap:6px;padding:12px 0 4px;border-top:1.5px dashed var(--rule)}
+.count{font-family:var(--hand);font-weight:700;font-size:clamp(56px,13vw,80px);line-height:1;font-variant-numeric:tabular-nums}
+.count-lbl{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-2)}
+.check-row{display:flex;gap:14px;align-items:center;padding:12px 14px;background:#fff;border:1.5px solid var(--line);border-radius:12px 16px 11px 15px/15px 11px 16px 12px}
+.check-row.slim{padding:6px 0;background:none;border:0}
+.check-label{font-family:var(--hand);font-size:26px;font-weight:700;line-height:1.1}
+.check-sub{font-size:14px;color:var(--ink-2)}
+
+/* sketch checkbox */
+.sbox{flex:none;display:inline-block;padding:0;background:none;border:0;cursor:pointer;color:var(--ink);border-radius:8px}
+.sbox svg{overflow:visible;display:block}
+.sbox .box{fill:transparent;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sbox .box2{fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;opacity:.55}
+.sbox.on .box{fill:rgba(58,125,68,.09)}
+.sbox.locked{opacity:.45;cursor:not-allowed}
+.sbox .tick{fill:none;stroke:var(--moss);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0;animation:draw .35s ease-out}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+
+/* polaroid */
+.polaroid-wrap{display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:10px;min-width:0}
+.polaroid{position:relative;width:min(100%,300px);background:#fff;padding:12px 12px 10px;border:1px solid #E3DECF;box-shadow:0 10px 22px -12px rgba(60,50,20,.55);transform:rotate(-1.6deg)}
+.polaroid.drag{outline:3px dashed var(--moss);outline-offset:4px}
+.tape{position:absolute;top:-13px;left:50%;width:92px;height:26px;margin-left:-46px;background:rgba(236,224,170,.78);border:1px solid rgba(180,165,110,.35);transform:rotate(2deg)}
+.shot{aspect-ratio:1/1;max-width:100%;background:#F1EEE4;display:grid;place-items:center;overflow:hidden}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot-empty{display:grid;gap:4px;justify-items:center;text-align:center;color:var(--ink-3);padding:12px}
+.shot-empty small{font-size:13px}
+.polaroid figcaption{padding-top:8px;display:flex;flex-direction:column;gap:2px}
+.stamp{font-family:var(--hand);font-size:21px;color:#3F3D37;transform:rotate(-1deg);line-height:1.1}
+.note{width:100%;min-width:0;border:0;border-bottom:1.5px dashed #BDB7A5;background:transparent;font-family:var(--hand);font-size:25px;color:var(--ink);padding:2px 0;border-radius:0}
+.note::placeholder{color:var(--ink-3)}
+.shot-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+
+/* horizon */
+.hz-row{list-style:none;margin:0;padding:8px 6px 14px;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.hz-card{flex:0 0 min(236px,74%);scroll-snap-align:start;background:#fff;border:1.5px solid var(--line);
+  border-radius:12px 16px 11px 15px/15px 11px 16px 12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.hz-card:nth-child(odd){transform:rotate(-.6deg)}
+.hz-card:nth-child(even){transform:rotate(.5deg)}
+.hz-time{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-2)}
+.hz-title{font-family:var(--hand);font-weight:700;font-size:27px;line-height:1.05;text-wrap:balance}
+.hz-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto}
+.when{font-size:13px;padding:2px 9px;background:var(--marker);border-radius:8px}
+.hz-empty{padding:6px 0 4px}
+
+/* list */
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1.5px dashed var(--rule)}
+.row:last-child{border-bottom:0}
+.row-main{display:flex;flex-direction:column;gap:0;padding:0;background:none;border:0;text-align:left;cursor:pointer;min-width:0;border-radius:8px}
+.row-time{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-2);align-self:flex-start}
+.row.now .row-time{background:linear-gradient(transparent 52%,var(--marker) 52%)}
+.row-title{font-family:var(--hand);font-weight:700;font-size:24px;line-height:1.1;overflow-wrap:anywhere}
+.row.done .row-title{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--moss);text-decoration-thickness:2px}
+.row.shown .row-title{text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--moss);text-underline-offset:4px}
+.row.shown.done .row-title{text-decoration-line:line-through}
+.row-meta{display:inline-flex;align-items:center;gap:6px}
+.cam{display:inline-grid;color:var(--ink-2)}
+
+/* footer */
+.foot{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;color:var(--ink-2);font-size:14px}
+.foot p{max-width:62ch}
+
+/* modal */
+.overlay{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(90,82,58,.26);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{width:min(600px,100%);max-height:100%;overflow-y:auto;background:var(--card);border:1.5px solid rgba(44,43,39,.5);
+  border-radius:18px 22px 16px 24px/22px 16px 24px 18px;padding:20px;box-shadow:0 30px 60px -30px rgba(60,50,20,.6);display:flex;flex-direction:column;gap:16px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet-head h2{font-family:var(--hand);font-weight:700;font-size:36px;line-height:1.05;display:flex;align-items:center;gap:10px}
+.form{display:flex;flex-direction:column;gap:14px}
+.f-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:13px;color:var(--ink-2)}
+.err{color:#7A2418;font-size:14px;background:#F8E3DD;border-radius:8px;padding:6px 10px}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+.btn-row .grp{display:flex;flex-wrap:wrap;gap:10px}
+
+/* duel */
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.score-card{text-align:center;background:#fff;border:1.5px solid var(--line);border-radius:14px 18px 13px 17px/17px 13px 18px 14px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.score-card h3{font-family:var(--hand);font-size:32px;font-weight:700;line-height:1}
+.big{font-family:var(--hand);font-weight:700;font-size:64px;line-height:1}
+.stepper{display:inline-flex;align-items:center;gap:8px}
+.stepval{font-family:var(--hand);font-weight:700;font-size:26px;min-width:2.2ch;text-align:center;font-variant-numeric:tabular-nums}
+.stamps{display:flex;gap:8px;justify-content:center}
+.dot{width:34px;height:34px;border-radius:50%;border:1.5px dashed rgba(44,43,39,.5);display:grid;place-items:center;font-family:var(--hand);font-weight:700;font-size:18px;color:var(--ink-3)}
+.dot.on{border-style:solid;border-color:var(--moss);background:var(--moss-bg);color:var(--moss-dark)}
+.today-duel{display:flex;flex-direction:column;gap:10px;padding:12px 14px;background:#F6F2E6;border:1.5px dashed rgba(44,43,39,.4);border-radius:12px}
+.td-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.stakes{display:flex;flex-direction:column;gap:10px;list-style:none;padding:0;margin:0}
+.stake{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:10px 12px;background:#fff;border:1.5px solid var(--line);border-radius:12px 16px 11px 15px/15px 11px 16px 12px}
+.stake.due{border-color:var(--moss);background:var(--moss-bg)}
+.stake .ic{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1.5px solid var(--ink);background:var(--card)}
+.stake b{font-family:var(--hand);font-size:24px;line-height:1.1}
+.stake span{display:block;font-size:14px;color:var(--ink-2)}
+
+/* sync */
+.sync{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px;background:#fff;border:1.5px solid var(--line);border-radius:14px 18px 13px 17px/17px 13px 18px 14px}
+.sync h3{font-family:var(--hand);font-size:28px;font-weight:700;line-height:1.1}
+.sync .f{align-self:stretch}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;word-break:break-all;background:#FAF8F0}
+.friend-live{align-self:stretch;display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--moss-bg);border:1.5px solid var(--moss);border-radius:12px}
+.fl-name{font-family:var(--hand);font-size:26px;line-height:1.1}
+.stat-row{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:15px}
+.stat-row b{font-family:var(--hand);font-size:26px;color:var(--moss-dark)}
+.mini-list{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
+.mini-list i{font-family:var(--hand);font-style:normal;font-weight:700;color:var(--moss-dark)}
+
+/* toast */
+.toast{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;justify-content:center;pointer-events:none;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.toast span{background:#fff;border:1.5px solid var(--ink);border-radius:12px 16px 11px 15px/15px 11px 16px 12px;padding:10px 16px;font-size:15px;box-shadow:0 12px 24px -14px rgba(60,50,20,.6);max-width:100%}
+
+@media (max-width:420px){
+  .card{padding:16px}
+  .row{gap:8px}
+  .big{font-size:56px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+(function(){
+if(typeof React==='undefined'||typeof ReactDOM==='undefined'||typeof htm==='undefined'){
+  document.getElementById('root').textContent='AARAMBH could not load its libraries. Check your connection and reload.';
+  return;
+}
+const { useState, useEffect, useRef } = React;
+const html = htm.bind(React.createElement);
+
+/* ---------- helpers ---------- */
+const pad = n => String(n).padStart(2,'0');
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const WDL=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MOL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dateKey = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const fmt12 = m => { m=((Math.round(m)%1440)+1440)%1440; const h=Math.floor(m/60), mm=m%60; return pad(h%12||12)+':'+pad(mm)+' '+(h<12?'AM':'PM'); };
+const toHM = m => pad(Math.floor(m/60))+':'+pad(m%60);
+const fromHM = s => { const p=String(s).split(':'); const h=parseInt(p[0],10), m=parseInt(p[1],10); return (isNaN(h)||isNaN(m))?null:h*60+m; };
+const fmtClock = sec => { const h=Math.floor(sec/3600)%24, m=Math.floor(sec/60)%60, s=Math.floor(sec)%60; return pad(h%12||12)+':'+pad(m)+':'+pad(s)+' '+(h<12?'AM':'PM'); };
+const fmtCount = sec => { sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600), m=Math.floor(sec/60)%60, s=sec%60; return h>0 ? h+':'+pad(m)+':'+pad(s) : m+':'+pad(s); };
+const fmtIn = min => { const t=Math.max(1,Math.round(min)); const h=Math.floor(t/60), m=t%60; return 'in '+(h>0 ? h+'h '+m+'m' : m+'m'); };
+const statusOf = (b,nowMin) => nowMin>=b.end ? 'past' : (nowMin>=b.start ? 'live' : 'future');
+
+/* ---------- sync codes ---------- */
+const CODE_PREFIX='AARAMBH1.';
+const toB64=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const fromB64=s=>decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))));
+const makeCode=m=>CODE_PREFIX+toB64(JSON.stringify(m));
+function parseCode(raw){
+  try{
+    const s=String(raw).replace(/\s+/g,''); const i=s.indexOf(CODE_PREFIX); if(i<0) return null;
+    const o=JSON.parse(fromB64(s.slice(i+CODE_PREFIX.length)));
+    if(!o||typeof o!=='object'||typeof o.x!=='number'||typeof o.d!=='string') return null;
+    return {name:String(o.n||'').slice(0,20),date:o.d.slice(0,10),xp:Math.max(0,Math.round(o.x)),count:Math.max(0,o.c|0),total:Math.max(0,o.t|0),streak:Math.max(0,o.s|0),lifetime:Math.max(0,o.l|0),
+      done:Array.isArray(o.k)?o.k.slice(0,20).map(e=>[String(e[0]).slice(0,60),e[1]|0]):[]};
+  }catch(e){ return null; }
+}
+
+/* ---------- storage ---------- */
+const KEY='aarambh.v1', PKEY='aarambh.proofs.v1';
+function load(key){ try{ const r=localStorage.getItem(key); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function save(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); return true; }catch(e){ return false; } }
+function prune(p){ const keep=Object.keys(p).sort().slice(-10); const o={}; keep.forEach(k=>{o[k]=p[k];}); return o; }
+
+/* ---------- presets ---------- */
+const DEFAULTS=[
+  {id:'b1',start:345,end:360,title:'Wake up & Knee Joint Status Check',xp:10,photo:true,
+   desc:'Get up and check how the knee feels before anything else. Bend it, straighten it, and walk a few steps. Take a photo of your knee check or your wake-up note.'},
+  {id:'b2',start:360,end:720,title:'DySO & CCE Core Study Block',xp:30,photo:true,
+   desc:'Deep study time for DySO and CCE. Phone away, one topic at a time. A photo of your desk or notes is your proof.'},
+  {id:'b3',start:720,end:900,title:'Creative Animation Block & Lunch',xp:15,photo:false,
+   desc:'Make something move on your animation project, then eat a proper lunch. Go slowly and enjoy it.'},
+  {id:'b4',start:900,end:945,title:'Knee Rehab & Upper Body Workout',xp:25,photo:true,
+   desc:'Do the knee rehab exercises first, then your upper body sets. Keep the knee pain-free. A photo of your workout log counts.'},
+  {id:'b5',start:960,end:1065,title:'SSC Advanced Math (Algebra & Mensuration)',xp:25,photo:false,
+   desc:'Practise Algebra and Mensuration problems. Solve first, then check the answers and note your mistakes.'},
+  {id:'b6',start:1080,end:1200,title:'Tuition Delivery Block',xp:20,photo:false,
+   desc:'Teach your tuition students. Have the material ready before you start and begin on time.'},
+  {id:'b7',start:1245,end:1305,title:'SSC Arithmetic Timed Drills',xp:20,photo:false,
+   desc:'Timed arithmetic drills. Keep a clock running and try to beat your last score.'},
+  {id:'b8',start:1305,end:1365,title:'SSC Reasoning Sprint',xp:15,photo:false,
+   desc:'A fast sprint of reasoning questions. If you get stuck, skip and come back at the end.'},
+  {id:'b9',start:1365,end:1425,title:'SSC GK/GS & Current Affairs',xp:15,photo:false,
+   desc:'Read GK, GS and today’s current affairs. Write down three facts you want to remember.'}
+];
+const LEVELS=['Seed','Sprout','Sapling','Shoot','Branch','Canopy','Grove','Forest'];
+const PRESETS=[['05:45 AM',345],['03:15 PM',915],['06:30 PM',1110],['09:00 PM',1260]];
+const TIERS=[
+  {n:5,icon:'coffee',text:'Loser buys a specialty coffee'},
+  {n:10,icon:'utensils',text:'Loser buys lunch or dinner at a budget eatery'},
+  {n:15,icon:'film',text:'Loser pays for luxury dining or an IMAX movie'}
+];
+
+function seedState(){
+  const t=new Date(); const k=n=>dateKey(addDays(t,-n));
+  const mk=ids=>{ const o={}; ids.forEach(id=>{ o[id]=DEFAULTS.find(b=>b.id===id).end; }); return o; };
+  const done={}; done[k(3)]=mk(['b1','b2','b3','b4','b5','b6']); done[k(2)]=mk(['b1','b3']); done[k(1)]=mk(['b2']);
+  return {blocks:DEFAULTS,done:done,duel:{you:4,arjun:3,arjunXp:40,settledOn:null,last:''},startedOn:k(3),sample:true};
+}
+function initial(){
+  const base=seedState(); const s=load(KEY);
+  if(s && Array.isArray(s.blocks) && s.blocks.length && s.done && s.duel) return Object.assign({},base,s);
+  return base;
+}
+
+function readPhoto(file,cb){
+  const fr=new FileReader();
+  fr.onerror=()=>cb(null);
+  fr.onload=()=>{
+    const img=new Image();
+    img.onerror=()=>cb(null);
+    img.onload=()=>{
+      const max=640, s=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(img.width*s)); c.height=Math.max(1,Math.round(img.height*s));
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      try{ cb(c.toDataURL('image/jpeg',0.72)); }catch(e){ cb(null); }
+    };
+    img.src=fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+/* ---------- icons (Lucide paths, inline) ---------- */
+const ICONS={
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  pencil:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+  swords:'<polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  rotate:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  coffee:'<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>',
+  utensils:'<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  film:'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  minus:'<path d="M5 12h14"/>',
+  image:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  copy:'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+};
+const Icon = ({name,size=18}) => html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" dangerouslySetInnerHTML=${{__html:ICONS[name]}}></svg>`;
+
+/* ---------- small components ---------- */
+function SketchBox({checked,disabled,onToggle,onBlocked,label,size=30}){
+  return html`<button type="button" role="checkbox" aria-checked=${checked?'true':'false'} aria-disabled=${disabled?'true':'false'} aria-label=${label}
+      className=${'sbox'+(checked?' on':'')+(disabled?' locked':'')} style=${{width:size,height:size}}
+      onClick=${()=>{ if(disabled){ if(onBlocked) onBlocked(); } else onToggle(); }}>
+    <svg viewBox="0 0 32 32" width="100%" height="100%" aria-hidden="true" focusable="false">
+      <path className="box" d="M6 7.2 C11 6.4 18 7 26 6.6 C26.7 12 26.2 19 26.4 26 C19 26.7 12 26.1 6.4 26.5 C5.9 19.5 6.6 13 6 7.2 Z"/>
+      <path className="box2" d="M7.4 5.6 C13 6.5 20 5.8 25 6.9"/>
+      ${checked && html`<path className="tick" pathLength="1" d="M9.5 17 C11.5 19 13 21.2 14.4 23.4 C17.5 15.5 22 9.5 28.5 4.6"/>`}
+    </svg>
+  </button>`;
+}
+
+function Modal({title,icon,onClose,children}){
+  const ref=useRef(null);
+  useEffect(()=>{
+    const onKey=e=>{ if(e.key==='Escape') onClose(); };
+    document.addEventListener('keydown',onKey);
+    const prev=document.body.style.overflow; document.body.style.overflow='hidden';
+    const first=ref.current && ref.current.querySelector('[data-autofocus]');
+    if(first) first.focus();
+    return ()=>{ document.removeEventListener('keydown',onKey); document.body.style.overflow=prev; };
+  },[]);
+  return html`<div className="overlay" onMouseDown=${e=>{ if(e.target===e.currentTarget) onClose(); }}>
+    <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title" ref=${ref}>
+      <div className="sheet-head">
+        <h2 id="modal-title">${icon && html`<${Icon} name=${icon} size=${26}/>`}<span>${title}</span></h2>
+        <button type="button" className="icon-btn" aria-label="Close" onClick=${onClose} data-autofocus="1"><${Icon} name="x" size=${22}/></button>
+      </div>
+      ${children}
+    </div>
+  </div>`;
+}
+
+function ConfirmButton({label,confirmLabel,onConfirm,icon,className='btn'}){
+  const [armed,setArmed]=useState(false);
+  useEffect(()=>{ if(!armed) return; const t=setTimeout(()=>setArmed(false),3500); return ()=>clearTimeout(t); },[armed]);
+  return html`<button type="button" className=${className+(armed?' danger':'')} onClick=${()=>{ if(armed){ setArmed(false); onConfirm(); } else setArmed(true); }}>
+    ${icon && html`<${Icon} name=${icon} size=${16}/>`}<span>${armed?confirmLabel:label}</span></button>`;
+}
+
+function Stepper({value,onChange,min=0,max=99,step=1,label}){
+  return html`<span className="stepper" role="group" aria-label=${label}>
+    <button type="button" className="icon-btn sq" aria-label=${'Decrease '+label} onClick=${()=>onChange(Math.max(min,value-step))}><${Icon} name="minus" size=${16}/></button>
+    <output className="stepval">${value}</output>
+    <button type="button" className="icon-btn sq" aria-label=${'Increase '+label} onClick=${()=>onChange(Math.min(max,value+step))}><${Icon} name="plus" size=${16}/></button>
+  </span>`;
+}
+
+/* ---------- time machine ---------- */
+function TimeMachine({realSec,nowSec,sim,onJump,onReset}){
+  const [custom,setCustom]=useState('12:00');
+  const active=sim?sim.start:null;
+  return html`<section className="tm" aria-label="Time machine">
+    <div className="tm-clock"><span className="lbl">System time</span><span className="clock">${fmtClock(realSec)}</span></div>
+    <div className="tm-main">
+      <div className="tm-head">
+        <span className="lbl">Time machine</span>
+        <span className="tm-state">${sim ? 'Pretending it is '+fmtClock(nowSec) : 'Showing the live time. Jump to any hour to try the day.'}</span>
+      </div>
+      <div className="tm-btns">
+        ${PRESETS.map(p=>html`<button key=${p[0]} type="button" className=${'chip'+(active===p[1]?' on':'')} onClick=${()=>onJump(p[1])}>${p[0]}</button>`)}
+        <label className="tm-custom"><span className="sr">Jump to any time</span>
+          <input type="time" id="tm-custom" className="field" value=${custom} onChange=${e=>{ setCustom(e.target.value); const m=fromHM(e.target.value); if(m!==null) onJump(m); }}/>
+        </label>
+        <button type="button" className=${'chip'+(!sim?' on':'')} onClick=${onReset}><${Icon} name="rotate" size=${14}/> Back to live</button>
+      </div>
+    </div>
+  </section>`;
+}
+
+/* ---------- level ---------- */
+function LevelBar({lifetime,todayXp,maxXp,doneCount,total}){
+  const lvl=Math.floor(lifetime/100)+1, into=lifetime%100;
+  const name=LEVELS[Math.min(lvl-1,LEVELS.length-1)];
+  return html`<section className="card level" aria-label="Level progress">
+    <div className="level-head">
+      <div className="level-name">Level ${lvl}<small>${name}</small></div>
+      <div className="nums">${into} of 100 XP toward level ${lvl+1} · ${lifetime} XP in total</div>
+    </div>
+    <div className="bar" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${into}><i style=${{width:into+'%'}}></i></div>
+    <div className="today-line">
+      <span>Today <b>${todayXp}</b> of ${maxXp} XP</span>
+      <span className="nums">${doneCount} of ${total} blocks done</span>
+    </div>
+  </section>`;
+}
+
+/* ---------- polaroid ---------- */
+function Polaroid({block,proof,onPhoto,onNote,onRemove}){
+  const camRef=useRef(null), upRef=useRef(null);
+  const [drag,setDrag]=useState(false);
+  const has=!!(proof && proof.img);
+  const take=file=>{ if(file && file.type && file.type.indexOf('image/')===0) onPhoto(file); };
+  return html`<div className="polaroid-wrap">
+    <figure className=${'polaroid'+(drag?' drag':'')}
+      onDragOver=${e=>{ e.preventDefault(); setDrag(true); }}
+      onDragLeave=${()=>setDrag(false)}
+      onDrop=${e=>{ e.preventDefault(); setDrag(false); take(e.dataTransfer.files[0]); }}>
+      <span className="tape" aria-hidden="true"></span>
+      <div className="shot">
+        ${has ? html`<img src=${proof.img} alt=${'Photo proof for '+block.title}/>`
+              : html`<div className="shot-empty"><${Icon} name="image" size=${36}/><span>${block.photo?'Photo proof needed':'Add a photo if you like'}</span><small>Drop a picture here</small></div>`}
+      </div>
+      <figcaption>
+        <div className="stamp">${proof && proof.ts ? proof.ts : 'No photo yet'}</div>
+        <input type="text" className="note" id=${'note-'+block.id} maxLength="80" placeholder="Write a note here" aria-label="Handwritten note"
+          value=${proof && proof.note ? proof.note : ''} onChange=${e=>onNote(e.target.value)}/>
+      </figcaption>
+    </figure>
+    <div className="shot-actions">
+      <button type="button" className="btn primary" onClick=${()=>camRef.current.click()}><${Icon} name="camera" size=${17}/> ${has?'Retake':'Take photo'}</button>
+      <button type="button" className="btn" onClick=${()=>upRef.current.click()}><${Icon} name="upload" size=${17}/> Upload</button>
+      ${has && html`<button type="button" className="btn ghost" onClick=${onRemove}><${Icon} name="trash" size=${16}/> Remove</button>`}
+      <input ref=${camRef} type="file" accept="image/*" capture="environment" hidden aria-label="Take a photo" onChange=${e=>{ take(e.target.files[0]); e.target.value=''; }}/>
+      <input ref=${upRef} type="file" accept="image/*" hidden aria-label="Upload a photo" onChange=${e=>{ take(e.target.files[0]); e.target.value=''; }}/>
+    </div>
+  </div>`;
+}
+
+/* ---------- current block ---------- */
+function CurrentPanel(p){
+  const {shown,status,nowSec,next}=p;
+  if(!shown){
+    const secs=next?Math.round(next.d*60):0;
+    return html`<section className="card cur" aria-label="Current block">
+      <div className="cur-top"><span className="badge">Between blocks</span></div>
+      <h2 className="cur-title">Nothing is scheduled right now.</h2>
+      <p className="soft">Stretch, drink water, reset. ${next ? 'Next up is '+next.b.title+' at '+fmt12(next.b.start)+'.' : ''}</p>
+      ${next && html`<div className="countbox"><div className="count">${fmtCount(secs)}</div><div className="count-lbl">until the next block${next.tomorrow?' (tomorrow)':''}</div></div>`}
+    </section>`;
+  }
+  const b=shown;
+  let cdVal, cdLbl, pct=null;
+  if(status==='live'){ cdVal=fmtCount(b.end*60-nowSec); cdLbl='left in this block'; pct=Math.min(1,Math.max(0,(nowSec-b.start*60)/((b.end-b.start)*60))); }
+  else if(status==='future'){ cdVal=fmtCount(b.start*60-nowSec); cdLbl='until this block starts'; }
+  else { cdVal='Over'; cdLbl='This block ended at '+fmt12(b.end); }
+  const badge=status==='live'?'Now':(status==='past'?'Earlier today':'Coming up');
+  const sub = p.isDone ? 'Finished at '+fmt12(p.doneAt)+'. You earned +'+b.xp+' XP.' : (p.lockReason ? p.lockReason+'.' : 'Tick it to earn +'+b.xp+' XP.');
+  return html`<section className="card cur" aria-label="Selected block">
+    <div className="cur-top">
+      <span className=${'badge '+status}>${badge}</span>
+      <div className="cur-actions">
+        ${p.isFocus && html`<button type="button" className="btn" onClick=${p.onBack}><${Icon} name="arrow" size=${16}/> Back to now</button>`}
+        <button type="button" className="btn" onClick=${p.onEdit}><${Icon} name="pencil" size=${16}/> Edit</button>
+      </div>
+    </div>
+    <div className="cur-body">
+      <div className="cur-info">
+        <p className="cur-time">${fmt12(b.start)} – ${fmt12(b.end)}</p>
+        <h2 className="cur-title">${b.title}</h2>
+        <div className="pills">
+          <span className="xp">${'+'+b.xp+' XP'}</span>
+          <span className="tag-photo">${b.photo ? html`<${Icon} name="camera" size=${14}/>` : null}${b.photo?' Photo proof required':'Photo optional'}</span>
+        </div>
+        <p className="desc">${b.desc}</p>
+        <div className="countbox">
+          <div className="count">${cdVal}</div>
+          <div className="count-lbl">${cdLbl}</div>
+          ${pct!==null && html`<div className="bar thin" role="progressbar" aria-label="Block progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${Math.round(pct*100)}><i style=${{width:(pct*100)+'%'}}></i></div>`}
+        </div>
+        <div className="check-row">
+          <${SketchBox} checked=${p.isDone} disabled=${!p.isDone && !!p.lockReason} size=${42} label=${'Mark '+b.title+' as done'}
+            onToggle=${p.onToggle} onBlocked=${p.onBlocked}/>
+          <div>
+            <div className="check-label">${p.isDone?'Done':'Mark this block done'}</div>
+            <div className="check-sub">${sub}</div>
+          </div>
+        </div>
+      </div>
+      <${Polaroid} block=${b} proof=${p.proof} onPhoto=${p.onPhoto} onNote=${p.onNote} onRemove=${p.onRemove}/>
+    </div>
+  </section>`;
+}
+
+/* ---------- horizon ---------- */
+function Horizon({items,fallback}){
+  return html`<section className="card" aria-labelledby="hz-title">
+    <div className="sec-head"><h2 id="hz-title">Next 3 hours</h2><span className="hint">Scroll sideways</span></div>
+    ${fallback && html`<p className="soft hz-empty">Nothing starts in the next 3 hours. Here is what comes next.</p>`}
+    ${items.length===0 && html`<p className="soft hz-empty">No more blocks are planned.</p>`}
+    <ul className="hz-row" tabIndex="0" aria-label="Upcoming blocks">
+      ${items.map(it=>html`<li key=${it.b.id} className="hz-card">
+        <span className="hz-time">${fmt12(it.b.start)} – ${fmt12(it.b.end)}</span>
+        <span className="hz-title">${it.b.title}</span>
+        <span className="hz-meta">
+          <span className="xp sm">${'+'+it.b.xp+' XP'}</span>
+          ${it.b.photo && html`<span className="tag-photo"><${Icon} name="camera" size=${13}/> Photo</span>`}
+          <span className="when">${(it.tomorrow?'Tomorrow, ':'')+fmtIn(it.d)}</span>
+        </span>
+      </li>`)}
+    </ul>
+  </section>`;
+}
+
+/* ---------- schedule list ---------- */
+function ScheduleList({sorted,doneToday,doneCount,nowMin,currentId,shownId,lockFor,onToggle,onBlocked,onOpen,onEdit}){
+  return html`<section className="card" aria-labelledby="list-title">
+    <div className="sec-head"><h2 id="list-title">Today’s page</h2><span className="hint">${doneCount} of ${sorted.length} done</span></div>
+    <ul className="rows">
+      ${sorted.map(b=>{
+        const isDone=doneToday[b.id]!==undefined; const reason=lockFor(b);
+        return html`<li key=${b.id} className=${'row'+(b.id===currentId?' now':'')+(isDone?' done':'')+(b.id===shownId?' shown':'')}>
+          <${SketchBox} checked=${isDone} disabled=${!!reason} size=${28} label=${'Mark '+b.title+' as done'} onToggle=${()=>onToggle(b)} onBlocked=${()=>onBlocked(b,reason)}/>
+          <button type="button" className="row-main" onClick=${()=>onOpen(b.id)}>
+            <span className="row-time">${fmt12(b.start)+' – '+fmt12(b.end)}</span>
+            <span className="row-title">${b.title}</span>
+          </button>
+          <span className="row-meta">
+            <span className="xp sm">${'+'+b.xp}</span>
+            ${b.photo && html`<span className="cam" title="Photo proof required"><${Icon} name="camera" size=${16}/><span className="sr">Photo proof required</span></span>`}
+          </span>
+          <button type="button" className="icon-btn" aria-label=${'Edit '+b.title} onClick=${()=>onEdit(b.id)}><${Icon} name="pencil" size=${17}/></button>
+        </li>`;
+      })}
+    </ul>
+  </section>`;
+}
+
+/* ---------- edit modal ---------- */
+function EditModal({block,onSave,onClose,onResetAll}){
+  const [f,setF]=useState({title:block.title,start:toHM(block.start),end:toHM(block.end),xp:String(block.xp),photo:block.photo,desc:block.desc||''});
+  const set=patch=>setF(Object.assign({},f,patch));
+  const s=fromHM(f.start), e=fromHM(f.end), xp=parseInt(f.xp,10);
+  let err='';
+  if(!f.title.trim()) err='Give the block a name.';
+  else if(s===null||e===null) err='Pick a start and an end time.';
+  else if(e<=s) err='The end time must be after the start time.';
+  else if(isNaN(xp)||xp<0||xp>200) err='XP must be a number from 0 to 200.';
+  return html`<${Modal} title="Edit this block" icon="pencil" onClose=${onClose}>
+    <form className="form" onSubmit=${ev=>{ ev.preventDefault(); if(!err) onSave(Object.assign({},block,{title:f.title.trim(),start:s,end:e,xp:xp,photo:f.photo,desc:f.desc.trim()})); }}>
+      <div className="f"><label htmlFor="ed-title">Block name</label><input id="ed-title" className="field" type="text" value=${f.title} onChange=${ev=>set({title:ev.target.value})}/></div>
+      <div className="f-row">
+        <div className="f"><label htmlFor="ed-start">Starts</label><input id="ed-start" className="field" type="time" value=${f.start} onChange=${ev=>set({start:ev.target.value})}/></div>
+        <div className="f"><label htmlFor="ed-end">Ends</label><input id="ed-end" className="field" type="time" value=${f.end} onChange=${ev=>set({end:ev.target.value})}/></div>
+        <div className="f"><label htmlFor="ed-xp">XP reward</label><input id="ed-xp" className="field" type="number" min="0" max="200" inputMode="numeric" value=${f.xp} onChange=${ev=>set({xp:ev.target.value})}/></div>
+      </div>
+      <div className="check-row slim">
+        <${SketchBox} checked=${f.photo} size=${32} label="Photo proof required" onToggle=${()=>set({photo:!f.photo})}/>
+        <span className="check-label">Photo proof required</span>
+      </div>
+      <div className="f"><label htmlFor="ed-desc">Short description</label><textarea id="ed-desc" className="field" value=${f.desc} onChange=${ev=>set({desc:ev.target.value})}></textarea></div>
+      ${err && html`<p className="err" role="alert">${err}</p>`}
+      <div className="btn-row">
+        <${ConfirmButton} label="Reset all to presets" confirmLabel="Tap again to reset all" icon="rotate" onConfirm=${onResetAll}/>
+        <div className="grp">
+          <button type="button" className="btn" onClick=${onClose}>Cancel</button>
+          <button type="submit" className="btn primary" disabled=${!!err}>Save block</button>
+        </div>
+      </div>
+    </form>
+  <//>`;
+}
+
+/* ---------- duel modal ---------- */
+function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say}){
+  const set=patch=>setDuel(Object.assign({},duel,patch));
+  const friend=duel.friend||null;
+  const fname=(friend&&friend.name)||'Arjun';
+  const fresh=!!(friend&&friend.date===todayKey);
+  const theirXp=fresh?friend.xp:duel.arjunXp;
+  const todayXp=mine.xp;
+  const settled=duel.settledOn===todayKey;
+  const myName=duel.myName||'';
+  const code=makeCode({n:myName,d:todayKey,x:mine.xp,c:mine.count,t:mine.total,s:mine.streak,l:mine.lifetime,k:mine.done});
+  const [paste,setPaste]=useState('');
+  const [perr,setPerr]=useState('');
+  const codeRef=useRef(null);
+  const ago=ts=>{ const m=Math.round((Date.now()-ts)/60000); return m<1?'just now':(m<60?m+' min ago':Math.round(m/60)+' h ago'); };
+
+  const copy=()=>{
+    const fallback=()=>{ const el=codeRef.current; if(el){ el.focus(); el.select(); } say('Code selected. Use your phone’s Copy option.'); };
+    try{ navigator.clipboard.writeText(code).then(()=>say('Sync code copied. Send it to your friend.'),fallback); }catch(e){ fallback(); }
+  };
+  const apply=raw=>{
+    const f=parseCode(raw);
+    if(!f){ setPerr('That does not look like an AARAMBH code. Copy the whole code and try again.'); return; }
+    setPerr(''); setPaste('');
+    setDuel(Object.assign({},duel,{friend:Object.assign({},f,{at:Date.now()}),arjunXp:f.xp}));
+    say((f.name||'Your friend')+'’s score updated: '+f.xp+' XP.');
+  };
+  const settle=()=>{
+    if(todayXp>theirXp) set({arjun:duel.arjun+1,settledOn:todayKey,last:'You won today ('+todayXp+' vs '+theirXp+' XP). '+fname+' takes a loss.'});
+    else if(todayXp<theirXp) set({you:duel.you+1,settledOn:todayKey,last:fname+' won today ('+theirXp+' vs '+todayXp+' XP). You take a loss.'});
+    else set({settledOn:todayKey,last:'Tied at '+todayXp+' XP. Nobody takes a loss.'});
+  };
+  const tier=n=>{
+    const y=duel.you>=n, a=duel.arjun>=n;
+    if(!y&&!a) return {due:false,s:'You: '+(n-duel.you)+' to go · '+fname+': '+(n-duel.arjun)+' to go'};
+    if(y&&a) return {due:true,s:duel.you===duel.arjun?'Both reached it. Split the bill.':(duel.you>duel.arjun?'You buy this one. You have more losses.':fname+' buys this one. More losses.')};
+    return {due:true,s:y?'You buy this one.':fname+' buys this one.'};
+  };
+  const card=(name,losses,key,streakText)=>html`<div className="score-card">
+    <h3>${name}</h3>
+    <div className="big" aria-label=${losses+' losses'}>${losses}</div>
+    <span className="lbl">losses</span>
+    <${Stepper} value=${losses} label=${name+' losses'} onChange=${v=>set({[key]:v})}/>
+    <div className="stamps" aria-hidden="true">${TIERS.map(t=>html`<span key=${t.n} className=${'dot'+(losses>=t.n?' on':'')}>${t.n}</span>`)}</div>
+    <span className="hint">${streakText}</span>
+  </div>`;
+
+  return html`<${Modal} title="Duel & Stakes" icon="swords" onClose=${onClose}>
+    <div className="scores">
+      ${card('You',duel.you,'you','Streak: '+mine.streak+(mine.streak===1?' day':' days'))}
+      ${card(fname,duel.arjun,'arjun',friend?'Streak: '+friend.streak+(friend.streak===1?' day':' days'):'Streak: paste a code')}
+    </div>
+
+    <section className="sync" aria-labelledby="sync-share">
+      <h3 id="sync-share">Share your score</h3>
+      <p className="soft">Copy your code and send it in any chat. Send a fresh one after each block you finish.</p>
+      <div className="f"><label htmlFor="duel-name">Your name (your friend sees it)</label>
+        <input id="duel-name" className="field" type="text" maxLength="20" placeholder="Your name" value=${myName} onChange=${e=>set({myName:e.target.value})}/></div>
+      <div className="f"><label htmlFor="duel-code">Your sync code</label>
+        <textarea id="duel-code" ref=${codeRef} className="field code" readOnly rows="3" value=${code} onFocus=${e=>e.target.select()}></textarea></div>
+      <button type="button" className="btn primary" onClick=${copy}><${Icon} name="copy" size=${16}/> Copy my code</button>
+    </section>
+
+    <section className="sync" aria-labelledby="sync-get">
+      <h3 id="sync-get">Get your friend’s score</h3>
+      <p className="soft">Paste their code. Your scoreboard updates right away.</p>
+      <div className="f"><label htmlFor="duel-paste">Friend’s sync code</label>
+        <textarea id="duel-paste" className="field code" rows="3" placeholder="AARAMBH1." value=${paste}
+          onChange=${e=>{ setPaste(e.target.value); setPerr(''); }}
+          onPaste=${e=>{ const t=e.clipboardData&&e.clipboardData.getData('text'); if(t){ e.preventDefault(); apply(t); } }}></textarea></div>
+      ${perr && html`<p className="err" role="alert">${perr}</p>`}
+      <button type="button" className="btn" disabled=${!paste.trim()} onClick=${()=>apply(paste)}><${Icon} name="rotate" size=${16}/> Update scoreboard</button>
+      ${friend && html`<div className="friend-live">
+        <div className="td-row"><b className="fl-name">${fname+'’s day'}</b><span className="hint">${fresh?'Synced '+ago(friend.at):'Code is from '+friend.date+'. Ask for a fresh one.'}</span></div>
+        <div className="stat-row"><span><b>${friend.xp}</b> XP</span><span><b>${friend.count}</b> of ${friend.total} blocks</span><span><b>${friend.streak}</b> day streak</span></div>
+        ${friend.done.length ? html`<ul className="mini-list">${friend.done.map((d,i)=>html`<li key=${i}>${d[0]} <i>${'+'+d[1]}</i></li>`)}</ul>` : html`<p className="soft">Nothing ticked yet today.</p>`}
+      </div>`}
+    </section>
+
+    <div className="today-duel">
+      <div className="td-row"><span>Your XP today</span><b className="stepval">${todayXp}</b></div>
+      <div className="td-row"><span>${fname+'’s XP today'}</span>
+        ${fresh ? html`<b className="stepval">${theirXp}</b>` : html`<${Stepper} value=${duel.arjunXp} step=${5} max=${300} label=${fname+' XP today'} onChange=${v=>set({arjunXp:v})}/>`}
+      </div>
+      ${!fresh && html`<p className="hint">Paste a code from today to use their real score. Until then, enter it by hand.</p>`}
+      <div className="td-row">
+        <button type="button" className="btn primary" disabled=${settled} onClick=${settle}><${Icon} name="swords" size=${16}/> ${settled?'Settled for today':'Settle today’s duel'}</button>
+      </div>
+      ${duel.last && html`<p className="soft">${duel.last}</p>`}
+    </div>
+
+    <ul className="stakes" aria-label="Stakes">
+      ${TIERS.map(t=>{ const i=tier(t.n); return html`<li key=${t.n} className=${'stake'+(i.due?' due':'')}>
+        <span className="ic"><${Icon} name=${t.icon} size=${22}/></span>
+        <div><b>${t.n+' losses'}</b><span>${t.text}</span><span>${i.s}</span></div>
+      </li>`; })}
+    </ul>
+    <div className="btn-row">
+      <p className="hint">${sample?'These scores are sample numbers. Reset them any time.':'Whoever has fewer XP at the end of the day takes the loss.'}</p>
+      <${ConfirmButton} label="Reset scores" confirmLabel="Tap again to reset" icon="rotate" onConfirm=${()=>{ setDuel(Object.assign({},duel,{you:0,arjun:0,settledOn:duel.settledOn,last:''})); say('Scores reset. New round.'); }}/>
+    </div>
+  <//>`;
+}
+
+/* ---------- app ---------- */
+function App(){
+  const [init]=useState(initial);
+  const [blocks,setBlocks]=useState(init.blocks);
+  const [done,setDone]=useState(init.done);
+  const [duel,setDuel]=useState(init.duel);
+  const [startedOn,setStartedOn]=useState(init.startedOn);
+  const [sample,setSample]=useState(init.sample);
+  const [proofs,setProofs]=useState(()=>prune(load(PKEY)||{}));
+  const [tick,setTick]=useState(Date.now());
+  const [sim,setSim]=useState(null);
+  const [focusId,setFocusId]=useState(null);
+  const [editId,setEditId]=useState(null);
+  const [duelOpen,setDuelOpen]=useState(false);
+  const [toast,setToast]=useState(null);
+  const panelRef=useRef(null);
+  const warned=useRef(false);
+  const latest=useRef({});
+
+  useEffect(()=>{ const t=setInterval(()=>setTick(Date.now()),1000); return ()=>clearInterval(t); },[]);
+  useEffect(()=>{ save(KEY,{blocks:blocks,done:done,duel:duel,startedOn:startedOn,sample:sample}); },[blocks,done,duel,startedOn,sample]);
+  useEffect(()=>{
+    const ok=save(PKEY,prune(proofs));
+    if(!ok && !warned.current){ warned.current=true; setToast({msg:'Browser storage is full. Photos stay until you close this page.',k:Date.now()}); }
+  },[proofs]);
+  useEffect(()=>{ if(!toast) return; const t=setTimeout(()=>setToast(null),3200); return ()=>clearTimeout(t); },[toast]);
+
+  const say=msg=>setToast({msg:msg,k:Date.now()});
+
+  /* time */
+  const realD=new Date(tick);
+  const realSec=realD.getHours()*3600+realD.getMinutes()*60+realD.getSeconds();
+  const simD=new Date(tick+(sim?sim.offsetMs:0));
+  const nowSec=simD.getHours()*3600+simD.getMinutes()*60+simD.getSeconds();
+  const nowMin=nowSec/60;
+  const todayKey=dateKey(realD);
+  latest.current={nowSec:nowSec,realD:realD};
+
+  const jump=min=>{
+    const n=new Date(); const rs=n.getHours()*3600+n.getMinutes()*60+n.getSeconds();
+    setSim({offsetMs:(min*60-rs)*1000,start:min}); setFocusId(null);
+  };
+
+  /* data */
+  const sorted=[...blocks].sort((a,b)=>a.start-b.start);
+  const ids=sorted.map(b=>b.id);
+  const doneToday=done[todayKey]||{};
+  const proofsToday=proofs[todayKey]||{};
+  const xpOf=id=>{ const b=blocks.find(x=>x.id===id); return b?b.xp:0; };
+  const dayIds=key=>Object.keys(done[key]||{}).filter(id=>ids.indexOf(id)>=0);
+  const doneCount=dayIds(todayKey).length;
+  const todayXp=dayIds(todayKey).reduce((s,id)=>s+xpOf(id),0);
+  const maxXp=sorted.reduce((s,b)=>s+b.xp,0);
+  const lifetime=Object.keys(done).reduce((s,k)=>s+dayIds(k).reduce((t,id)=>t+xpOf(id),0),0);
+
+  const need=Math.ceil(sorted.length/2);
+  const missed=n=>{ const k=dateKey(addDays(realD,-n)); return k>=startedOn && dayIds(k).length<need; };
+  const warn=missed(1)&&missed(2)&&doneCount<need;
+  const okDay=n=>dayIds(dateKey(addDays(realD,-n))).length>=need;
+  let streak=0; { let n=doneCount>=need?0:1; while(n<365&&okDay(n)){ streak++; n++; } }
+  const mine={xp:todayXp,count:doneCount,total:sorted.length,streak:streak,lifetime:lifetime,done:sorted.filter(b=>doneToday[b.id]!==undefined).map(b=>[b.title,b.xp])};
+  const fname=(duel.friend&&duel.friend.name)||'Arjun';
+
+  const current=sorted.find(b=>nowMin>=b.start&&nowMin<b.end)||null;
+  const shown=(focusId&&sorted.find(b=>b.id===focusId))||current;
+  const isFocus=!!(shown&&(!current||shown.id!==current.id));
+  const ups=sorted.filter(b=>!current||b.id!==current.id).map(b=>{ let d=b.start-nowMin; const tomorrow=d<=0; if(tomorrow) d+=1440; return {b:b,d:d,tomorrow:tomorrow}; }).sort((a,b)=>a.d-b.d);
+  const within=ups.filter(u=>u.d<=180);
+  const horizonItems=within.length?within:ups.slice(0,3);
+
+  const lockFor=b=>{
+    if(doneToday[b.id]!==undefined) return null;
+    if(nowMin<b.start) return 'Opens at '+fmt12(b.start);
+    if(b.photo && !(proofsToday[b.id]&&proofsToday[b.id].img)) return 'Add your photo proof first';
+    return null;
+  };
+
+  /* actions */
+  const scrollToPanel=()=>{
+    const el=panelRef.current; if(!el) return;
+    const smooth=!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.scrollIntoView({behavior:smooth?'smooth':'auto',block:'start'});
+  };
+  const openBlock=id=>{ setFocusId(id); setTimeout(scrollToPanel,30); };
+  const toggle=b=>{
+    const was=doneToday[b.id]!==undefined;
+    setDone(prev=>{
+      const day=Object.assign({},prev[todayKey]||{});
+      if(day[b.id]!==undefined) delete day[b.id]; else day[b.id]=Math.floor(latest.current.nowSec/60);
+      return Object.assign({},prev,{[todayKey]:day});
+    });
+    if(was) say('Unticked. XP taken back.');
+    else say(Math.floor((lifetime+b.xp)/100)>Math.floor(lifetime/100) ? 'Level up! +'+b.xp+' XP.' : '+'+b.xp+' XP. Nicely done.');
+  };
+  const blocked=(b,reason)=>{
+    if(reason && reason.indexOf('photo')>=0){ openBlock(b.id); say('Add a photo for this block, then tick it.'); }
+    else if(reason) say(reason+'.');
+  };
+  const stampNow=()=>{ const l=latest.current; return WD[l.realD.getDay()]+' '+l.realD.getDate()+' '+MO[l.realD.getMonth()]+' · '+fmt12(Math.floor(l.nowSec/60)); };
+  const patchProof=(id,patch)=>setProofs(p=>{
+    const day=Object.assign({},p[todayKey]||{});
+    day[id]=Object.assign({},day[id]||{},patch);
+    return Object.assign({},p,{[todayKey]:day});
+  });
+  const addPhoto=(id,file)=>readPhoto(file,img=>{
+    if(!img){ say('That file could not be read as a picture.'); return; }
+    patchProof(id,{img:img,ts:stampNow()}); say('Photo added to your page.');
+  });
+  const removePhoto=id=>patchProof(id,{img:null,ts:null});
+  const saveBlock=nb=>{ setBlocks(bs=>bs.map(b=>b.id===nb.id?nb:b)); setEditId(null); say('Block updated.'); };
+  const resetBlocks=()=>{ setBlocks(DEFAULTS); setEditId(null); say('Presets restored.'); };
+  const startFresh=()=>{
+    setDone({}); setProofs({}); setDuel({you:0,arjun:0,arjunXp:0,settledOn:null,last:''});
+    setStartedOn(todayKey); setSample(false); say('Fresh page. Good luck.');
+  };
+
+  const editBlock=editId?blocks.find(b=>b.id===editId):null;
+  const shownProof=shown?proofsToday[shown.id]:null;
+  const shownDone=shown?doneToday[shown.id]!==undefined:false;
+
+  return html`<div className="page">
+    <header className="top">
+      <div>
+        <h1 className="wordmark">AARAMBH</h1>
+        <svg className="uline" viewBox="0 0 260 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9 C40 3 70 12 110 7 S190 4 257 8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
+        <p className="tag">${WDL[realD.getDay()]}, ${realD.getDate()} ${MOL[realD.getMonth()]}. Start with the next hour.</p>
+      </div>
+      <button type="button" className="btn" onClick=${()=>setDuelOpen(true)}><${Icon} name="swords" size=${18}/> You vs. ${fname} <span className="score">${duel.you+'–'+duel.arjun}</span></button>
+    </header>
+
+    <${TimeMachine} realSec=${realSec} nowSec=${nowSec} sim=${sim} onJump=${jump} onReset=${()=>{ setSim(null); setFocusId(null); }}/>
+
+    <${LevelBar} lifetime=${lifetime} todayXp=${todayXp} maxXp=${maxXp} doneCount=${doneCount} total=${sorted.length}/>
+
+    ${warn && html`<section className="banner" role="alert">
+      <${Icon} name="alert" size=${28}/>
+      <div>
+        <h2>Two days missed in a row</h2>
+        <p>Yesterday and the day before, you finished fewer than half of your blocks. Finish ${need} of ${sorted.length} today to break the pattern. Start with the next block.</p>
+        ${sample && html`<small>This warning comes from the sample history. Use Start fresh at the bottom to clear it.</small>`}
+      </div>
+    </section>`}
+
+    <main className="split">
+      <div className="col-left" ref=${panelRef}>
+        <${CurrentPanel} shown=${shown} status=${shown?statusOf(shown,nowMin):'none'} nowSec=${nowSec} next=${ups[0]}
+          isFocus=${isFocus} onBack=${()=>setFocusId(null)}
+          isDone=${shownDone} doneAt=${shown?doneToday[shown.id]:0} lockReason=${shown?lockFor(shown):null}
+          onToggle=${()=>shown&&toggle(shown)} onBlocked=${()=>shown&&blocked(shown,lockFor(shown))} onEdit=${()=>shown&&setEditId(shown.id)}
+          proof=${shownProof} onPhoto=${f=>shown&&addPhoto(shown.id,f)} onNote=${v=>shown&&patchProof(shown.id,{note:v})} onRemove=${()=>shown&&removePhoto(shown.id)}/>
+      </div>
+      <div className="col-right">
+        <${Horizon} items=${horizonItems} fallback=${within.length===0&&ups.length>0}/>
+        <${ScheduleList} sorted=${sorted} doneToday=${doneToday} doneCount=${doneCount} nowMin=${nowMin}
+          currentId=${current?current.id:null} shownId=${shown?shown.id:null}
+          lockFor=${lockFor} onToggle=${toggle} onBlocked=${blocked} onOpen=${openBlock} onEdit=${setEditId}/>
+      </div>
+    </main>
+
+    <footer className="foot">
+      <p>${sample?'Sample history is showing so you can see the warning and the duel at work. ':''}Your page is saved in this browser only. Photos are shrunk before saving.</p>
+      <${ConfirmButton} label="Start fresh" confirmLabel="Tap again to clear history" icon="rotate" onConfirm=${startFresh}/>
+    </footer>
+
+    ${editBlock && html`<${EditModal} key=${editBlock.id} block=${editBlock} onSave=${saveBlock} onClose=${()=>setEditId(null)} onResetAll=${resetBlocks}/>`}
+    ${duelOpen && html`<${DuelModal} duel=${duel} setDuel=${setDuel} mine=${mine} todayKey=${todayKey} sample=${sample} onClose=${()=>setDuelOpen(false)} say=${say}/>`}
+    ${toast && html`<div className="toast" role="status" aria-live="polite"><span>${toast.msg}</span></div>`}
+  </div>`;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
+})();
+</script>
+
+</body>
+</html>
