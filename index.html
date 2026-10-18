@@ -254,6 +254,38 @@ textarea.field{resize:vertical;min-height:84px}
 .mini-list{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2)}
 .mini-list i{font-family:var(--hand);font-style:normal;font-weight:700;color:var(--moss-dark)}
 
+/* live duel */
+.live{display:flex;flex-direction:column;gap:12px}
+.live-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 14px}
+.live-head h2{font-family:var(--hand);font-size:32px;font-weight:700;line-height:1.1;display:flex;align-items:center;gap:10px}
+.dot-live{width:12px;height:12px;border-radius:50%;background:#B9B3A0;flex:none}
+.dot-live.on{background:var(--moss)}
+.dot-live.off{background:#C0762B}
+.lv-row{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:#fff;border:1.5px solid var(--line);border-radius:12px 16px 11px 15px/15px 11px 16px 12px}
+.lv-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 14px}
+.lv-label{font-family:var(--hand);font-size:26px;font-weight:700;line-height:1.1}
+.lv-score{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:15px}
+.lv-score b{font-family:var(--hand);font-size:30px;line-height:1;color:var(--moss-dark)}
+.lv-meta{font-size:14px;color:var(--ink-2)}
+.lv-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.roomcode{font-family:var(--hand);font-size:44px;font-weight:700;letter-spacing:.08em;line-height:1}
+.review-item{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:14px;align-items:start;padding:12px 0;border-bottom:1.5px dashed var(--rule)}
+.review-item:last-child{border-bottom:0}
+@media (max-width:480px){.review-item{grid-template-columns:minmax(0,1fr)}}
+.rv-photo{aspect-ratio:1/1;max-width:100%;background:#F1EEE4;display:grid;place-items:center;overflow:hidden;border:1px solid #E3DECF;font-size:13px;color:var(--ink-3);text-align:center;padding:6px}
+.rv-photo img{width:100%;height:100%;object-fit:cover;display:block;padding:0}
+.rv-info{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.rv-title{font-family:var(--hand);font-size:26px;line-height:1.1}
+.rv-note{font-family:var(--hand);font-size:22px;color:var(--ink-2)}
+.status{display:inline-block;font-size:13px;padding:2px 9px;border-radius:8px;border:1.5px dashed rgba(44,43,39,.45)}
+.status.ok{border-style:solid;border-color:var(--moss);background:var(--moss-bg);color:var(--moss-dark)}
+.status.bad{border-style:solid;border-color:#8F2E1F;background:#F8E3DD;color:#6E1F14}
+.btn[aria-pressed="true"]{box-shadow:0 0 0 3px rgba(58,125,68,.4)}
+details.manual{border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px}
+details.manual summary{cursor:pointer;font-family:var(--hand);font-size:24px;font-weight:700}
+details.manual[open] summary{margin-bottom:10px}
+details.manual .sync{border:0;padding:0}
+
 /* toast */
 .toast{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;justify-content:center;pointer-events:none;
   padding:12px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -313,6 +345,62 @@ function parseCode(raw){
       done:Array.isArray(o.k)?o.k.slice(0,20).map(e=>[String(e[0]).slice(0,60),e[1]|0]):[]};
   }catch(e){ return null; }
 }
+
+/* SYNC-CORE-START */
+const PEN=20;
+const CFG_KEY='aarambh.room.v1';
+const DEFAULT_DB='https://aarambh-c110a-default-rtdb.asia-southeast1.firebasedatabase.app';
+function dbOk(u){ return /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app)\/?$/i.test(String(u).trim()); }
+const rid=n=>{
+  const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s='';
+  const c=(typeof crypto!=='undefined'&&crypto.getRandomValues)?crypto.getRandomValues(new Uint8Array(n)):Array.from({length:n},()=>Math.floor(Math.random()*256));
+  for(let i=0;i<n;i++) s+=a[c[i]%a.length];
+  return s;
+};
+const fmtRoom=c=>String(c).slice(0,5)+'-'+String(c).slice(5);
+const Room={
+  url(c,p){ return c.db.replace(/\/+$/,'')+'/rooms/'+c.room+'/'+p+'.json'; },
+  async req(c,p,method,body){
+    const o={method:method||'GET'};
+    if(body!==undefined){ o.headers={'Content-Type':'application/json'}; o.body=JSON.stringify(body); }
+    const r=await fetch(Room.url(c,p),o);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  },
+  get(c,p){ return Room.req(c,p); },
+  put(c,p,v){ return Room.req(c,p,'PUT',v); }
+};
+function dayView(live,date,me,fr,localStats){
+  const d=(live.days&&live.days[date])||{};
+  const stats=Object.assign({},d.stats||{});
+  if(localStats) stats[me]=localStats;
+  const rev=d.rev||{};
+  const res=(live.results||{})[date]||null;
+  const calc=pid=>{
+    const s=stats[pid]; if(!s) return null;
+    const pr=s.proofs||{}; let rej=0,pend=0,ok=0;
+    Object.keys(pr).forEach(id=>{
+      const r=(rev[pid]||{})[id];
+      if(!r||r.ts!==pr[id].ts) pend++; else if(r.ok) ok++; else rej++;
+    });
+    const xp=s.xp|0;
+    return {xp:xp,count:s.count|0,total:s.total|0,done:s.done||[],proofs:pr,rej:rej,pend:pend,ok:ok,eff:Math.max(0,xp-PEN*rej)};
+  };
+  return {date:date,me:calc(me),fr:fr?calc(fr):null,res:res,rev:rev};
+}
+function shrink(src,max,q,cb){
+  const img=new Image();
+  img.onerror=()=>cb(null);
+  img.onload=()=>{
+    const s=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*s)); c.height=Math.max(1,Math.round(img.height*s));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    try{ cb(c.toDataURL('image/jpeg',q)); }catch(e){ cb(null); }
+  };
+  img.src=src;
+}
+/* SYNC-CORE-END */
 
 /* ---------- storage ---------- */
 const KEY='aarambh.v1', PKEY='aarambh.proofs.v1';
@@ -473,7 +561,7 @@ function TimeMachine({realSec,nowSec,sim,onJump,onReset}){
 }
 
 /* ---------- level ---------- */
-function LevelBar({lifetime,todayXp,maxXp,doneCount,total}){
+function LevelBar({lifetime,todayXp,maxXp,doneCount,total,penalty}){
   const lvl=Math.floor(lifetime/100)+1, into=lifetime%100;
   const name=LEVELS[Math.min(lvl-1,LEVELS.length-1)];
   return html`<section className="card level" aria-label="Level progress">
@@ -484,7 +572,7 @@ function LevelBar({lifetime,todayXp,maxXp,doneCount,total}){
     <div className="bar" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${into}><i style=${{width:into+'%'}}></i></div>
     <div className="today-line">
       <span>Today <b>${todayXp}</b> of ${maxXp} XP</span>
-      <span className="nums">${doneCount} of ${total} blocks done</span>
+      <span className="nums">${doneCount} of ${total} blocks done${penalty?' · −'+penalty+' XP for rejected proofs':''}</span>
     </div>
   </section>`;
 }
@@ -656,10 +744,10 @@ function EditModal({block,onSave,onClose,onResetAll}){
 }
 
 /* ---------- duel modal ---------- */
-function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say}){
+function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say,fname,lossMe,lossFr,room}){
+  const cfg=room.cfg;
   const set=patch=>setDuel(Object.assign({},duel,patch));
   const friend=duel.friend||null;
-  const fname=(friend&&friend.name)||'Arjun';
   const fresh=!!(friend&&friend.date===todayKey);
   const theirXp=fresh?friend.xp:duel.arjunXp;
   const todayXp=mine.xp;
@@ -668,12 +756,14 @@ function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say}){
   const code=makeCode({n:myName,d:todayKey,x:mine.xp,c:mine.count,t:mine.total,s:mine.streak,l:mine.lifetime,k:mine.done});
   const [paste,setPaste]=useState('');
   const [perr,setPerr]=useState('');
+  const [dbIn,setDbIn]=useState(room.rc.db||'');
+  const [joinIn,setJoinIn]=useState('');
   const codeRef=useRef(null);
   const ago=ts=>{ const m=Math.round((Date.now()-ts)/60000); return m<1?'just now':(m<60?m+' min ago':Math.round(m/60)+' h ago'); };
 
-  const copy=()=>{
-    const fallback=()=>{ const el=codeRef.current; if(el){ el.focus(); el.select(); } say('Code selected. Use your phone’s Copy option.'); };
-    try{ navigator.clipboard.writeText(code).then(()=>say('Sync code copied. Send it to your friend.'),fallback); }catch(e){ fallback(); }
+  const copyText=(text,okMsg)=>{
+    const fallback=()=>{ const el=codeRef.current; if(el){ el.focus(); el.select(); } say('Selected. Use your phone’s Copy option.'); };
+    try{ navigator.clipboard.writeText(text).then(()=>say(okMsg),fallback); }catch(e){ fallback(); }
   };
   const apply=raw=>{
     const f=parseCode(raw);
@@ -688,63 +778,62 @@ function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say}){
     else set({settledOn:todayKey,last:'Tied at '+todayXp+' XP. Nobody takes a loss.'});
   };
   const tier=n=>{
-    const y=duel.you>=n, a=duel.arjun>=n;
-    if(!y&&!a) return {due:false,s:'You: '+(n-duel.you)+' to go · '+fname+': '+(n-duel.arjun)+' to go'};
-    if(y&&a) return {due:true,s:duel.you===duel.arjun?'Both reached it. Split the bill.':(duel.you>duel.arjun?'You buy this one. You have more losses.':fname+' buys this one. More losses.')};
+    const y=lossMe>=n, a=lossFr>=n;
+    if(!y&&!a) return {due:false,s:'You: '+(n-lossMe)+' to go · '+fname+': '+(n-lossFr)+' to go'};
+    if(y&&a) return {due:true,s:lossMe===lossFr?'Both reached it. Split the bill.':(lossMe>lossFr?'You buy this one. You have more losses.':fname+' buys this one. More losses.')};
     return {due:true,s:y?'You buy this one.':fname+' buys this one.'};
   };
   const card=(name,losses,key,streakText)=>html`<div className="score-card">
     <h3>${name}</h3>
     <div className="big" aria-label=${losses+' losses'}>${losses}</div>
     <span className="lbl">losses</span>
-    <${Stepper} value=${losses} label=${name+' losses'} onChange=${v=>set({[key]:v})}/>
+    ${!cfg && html`<${Stepper} value=${losses} label=${name+' losses'} onChange=${v=>set({[key]:v})}/>`}
     <div className="stamps" aria-hidden="true">${TIERS.map(t=>html`<span key=${t.n} className=${'dot'+(losses>=t.n?' on':'')}>${t.n}</span>`)}</div>
     <span className="hint">${streakText}</span>
   </div>`;
+  const frStreak=cfg?(room.frProfile?'Streak: '+(room.frProfile.streak|0)+' days':'Streak: not joined yet'):(friend?'Streak: '+friend.streak+(friend.streak===1?' day':' days'):'Streak: paste a code');
+
+  const roomPanel=cfg ? html`<section className="sync" aria-labelledby="room-h">
+      <h3 id="room-h">Live room</h3>
+      <div className="roomcode" aria-label="Room code">${fmtRoom(cfg.room)}</div>
+      <p className="soft">${room.frProfile?fname+' is in the room. Scores, proofs and results update by themselves.':'Waiting for your friend. Send them this code and ask them to tap Join room.'}</p>
+      <div className="lv-actions">
+        <button type="button" className="btn primary" onClick=${()=>copyText(fmtRoom(cfg.room),'Room code copied.')}><${Icon} name="copy" size=${16}/> Copy room code</button>
+        <${ConfirmButton} label="Leave room" confirmLabel="Tap again to leave" icon="x" onConfirm=${room.onLeave}/>
+      </div>
+      <p className="hint">Settle each day from the Live duel card on the main page.</p>
+    </section>`
+  : html`<section className="sync" aria-labelledby="room-h">
+      <h3 id="room-h">Live room</h3>
+      <p className="soft">One of you creates a room and sends the code. The other joins with it. After that, scores update by themselves.</p>
+      ${!room.defaultDb && html`<div className="f"><label htmlFor="duel-db">Database link</label>
+        <input id="duel-db" className="field" type="url" placeholder="https://your-project-default-rtdb.firebaseio.com" value=${dbIn} onChange=${e=>setDbIn(e.target.value)}/></div>`}
+      <button type="button" className="btn primary" disabled=${room.busy} onClick=${()=>room.onCreate(dbIn)}><${Icon} name="plus" size=${16}/> Create a room</button>
+      <div className="f"><label htmlFor="duel-join">Or join your friend’s room</label>
+        <input id="duel-join" className="field" type="text" maxLength="14" placeholder="ABCDE-FGHJK" autoCapitalize="characters" value=${joinIn} onChange=${e=>setJoinIn(e.target.value)}/></div>
+      <button type="button" className="btn" disabled=${room.busy||!joinIn.trim()} onClick=${()=>room.onJoin(dbIn,joinIn)}><${Icon} name="arrow" size=${16}/> Join room</button>
+      ${room.err && html`<p className="err" role="alert">${room.err}</p>`}
+    </section>`;
 
   return html`<${Modal} title="Duel & Stakes" icon="swords" onClose=${onClose}>
     <div className="scores">
-      ${card('You',duel.you,'you','Streak: '+mine.streak+(mine.streak===1?' day':' days'))}
-      ${card(fname,duel.arjun,'arjun',friend?'Streak: '+friend.streak+(friend.streak===1?' day':' days'):'Streak: paste a code')}
+      ${card('You',lossMe,'you','Streak: '+mine.streak+(mine.streak===1?' day':' days'))}
+      ${card(fname,lossFr,'arjun',frStreak)}
     </div>
 
-    <section className="sync" aria-labelledby="sync-share">
-      <h3 id="sync-share">Share your score</h3>
-      <p className="soft">Copy your code and send it in any chat. Send a fresh one after each block you finish.</p>
-      <div className="f"><label htmlFor="duel-name">Your name (your friend sees it)</label>
-        <input id="duel-name" className="field" type="text" maxLength="20" placeholder="Your name" value=${myName} onChange=${e=>set({myName:e.target.value})}/></div>
-      <div className="f"><label htmlFor="duel-code">Your sync code</label>
-        <textarea id="duel-code" ref=${codeRef} className="field code" readOnly rows="3" value=${code} onFocus=${e=>e.target.select()}></textarea></div>
-      <button type="button" className="btn primary" onClick=${copy}><${Icon} name="copy" size=${16}/> Copy my code</button>
-    </section>
+    ${roomPanel}
 
-    <section className="sync" aria-labelledby="sync-get">
-      <h3 id="sync-get">Get your friend’s score</h3>
-      <p className="soft">Paste their code. Your scoreboard updates right away.</p>
-      <div className="f"><label htmlFor="duel-paste">Friend’s sync code</label>
-        <textarea id="duel-paste" className="field code" rows="3" placeholder="AARAMBH1." value=${paste}
-          onChange=${e=>{ setPaste(e.target.value); setPerr(''); }}
-          onPaste=${e=>{ const t=e.clipboardData&&e.clipboardData.getData('text'); if(t){ e.preventDefault(); apply(t); } }}></textarea></div>
-      ${perr && html`<p className="err" role="alert">${perr}</p>`}
-      <button type="button" className="btn" disabled=${!paste.trim()} onClick=${()=>apply(paste)}><${Icon} name="rotate" size=${16}/> Update scoreboard</button>
-      ${friend && html`<div className="friend-live">
-        <div className="td-row"><b className="fl-name">${fname+'’s day'}</b><span className="hint">${fresh?'Synced '+ago(friend.at):'Code is from '+friend.date+'. Ask for a fresh one.'}</span></div>
-        <div className="stat-row"><span><b>${friend.xp}</b> XP</span><span><b>${friend.count}</b> of ${friend.total} blocks</span><span><b>${friend.streak}</b> day streak</span></div>
-        ${friend.done.length ? html`<ul className="mini-list">${friend.done.map((d,i)=>html`<li key=${i}>${d[0]} <i>${'+'+d[1]}</i></li>`)}</ul>` : html`<p className="soft">Nothing ticked yet today.</p>`}
-      </div>`}
-    </section>
-
-    <div className="today-duel">
+    ${!cfg && html`<div className="today-duel">
       <div className="td-row"><span>Your XP today</span><b className="stepval">${todayXp}</b></div>
       <div className="td-row"><span>${fname+'’s XP today'}</span>
         ${fresh ? html`<b className="stepval">${theirXp}</b>` : html`<${Stepper} value=${duel.arjunXp} step=${5} max=${300} label=${fname+' XP today'} onChange=${v=>set({arjunXp:v})}/>`}
       </div>
-      ${!fresh && html`<p className="hint">Paste a code from today to use their real score. Until then, enter it by hand.</p>`}
+      ${!fresh && html`<p className="hint">Without a live room, enter their XP by hand or paste a code from today.</p>`}
       <div className="td-row">
         <button type="button" className="btn primary" disabled=${settled} onClick=${settle}><${Icon} name="swords" size=${16}/> ${settled?'Settled for today':'Settle today’s duel'}</button>
       </div>
       ${duel.last && html`<p className="soft">${duel.last}</p>`}
-    </div>
+    </div>`}
 
     <ul className="stakes" aria-label="Stakes">
       ${TIERS.map(t=>{ const i=tier(t.n); return html`<li key=${t.n} className=${'stake'+(i.due?' due':'')}>
@@ -752,11 +841,114 @@ function DuelModal({duel,setDuel,mine,todayKey,sample,onClose,say}){
         <div><b>${t.n+' losses'}</b><span>${t.text}</span><span>${i.s}</span></div>
       </li>`; })}
     </ul>
-    <div className="btn-row">
+
+    <details className="manual">
+      <summary>Share by code instead</summary>
+      <div className="sync">
+        <p className="soft">No live room? Copy your code and send it in any chat. Paste your friend’s code to see their score.</p>
+        <div className="f"><label htmlFor="duel-name">Your name (your friend sees it)</label>
+          <input id="duel-name" className="field" type="text" maxLength="20" placeholder="Your name" value=${myName} onChange=${e=>set({myName:e.target.value})}/></div>
+        <div className="f"><label htmlFor="duel-code">Your sync code</label>
+          <textarea id="duel-code" ref=${codeRef} className="field code" readOnly rows="3" value=${code} onFocus=${e=>e.target.select()}></textarea></div>
+        <button type="button" className="btn primary" onClick=${()=>copyText(code,'Sync code copied. Send it to your friend.')}><${Icon} name="copy" size=${16}/> Copy my code</button>
+        <div className="f"><label htmlFor="duel-paste">Friend’s sync code</label>
+          <textarea id="duel-paste" className="field code" rows="3" placeholder="AARAMBH1." value=${paste}
+            onChange=${e=>{ setPaste(e.target.value); setPerr(''); }}
+            onPaste=${e=>{ const t=e.clipboardData&&e.clipboardData.getData('text'); if(t){ e.preventDefault(); apply(t); } }}></textarea></div>
+        ${perr && html`<p className="err" role="alert">${perr}</p>`}
+        <button type="button" className="btn" disabled=${!paste.trim()} onClick=${()=>apply(paste)}><${Icon} name="rotate" size=${16}/> Update scoreboard</button>
+        ${friend && html`<p className="soft">${friend.name||'Your friend'}: ${friend.xp} XP, ${friend.count} of ${friend.total} blocks, ${friend.streak} day streak. ${fresh?'Synced '+ago(friend.at)+'.':'Code is from '+friend.date+'.'}</p>`}
+      </div>
+    </details>
+
+    ${!cfg && html`<div className="btn-row">
       <p className="hint">${sample?'These scores are sample numbers. Reset them any time.':'Whoever has fewer XP at the end of the day takes the loss.'}</p>
-      <${ConfirmButton} label="Reset scores" confirmLabel="Tap again to reset" icon="rotate" onConfirm=${()=>{ setDuel(Object.assign({},duel,{you:0,arjun:0,settledOn:duel.settledOn,last:''})); say('Scores reset. New round.'); }}/>
-    </div>
+      <${ConfirmButton} label="Reset scores" confirmLabel="Tap again to reset" icon="rotate" onConfirm=${()=>{ setDuel(Object.assign({},duel,{you:0,arjun:0,last:''})); say('Scores reset. New round.'); }}/>
+    </div>`}
   <//>`;
+}
+
+/* ---------- review modal ---------- */
+function ReviewModal({date,view,cfg,frPid,fname,locked,onDecide,onClose,cache}){
+  const fr=view.fr;
+  const ids=Object.keys(fr.proofs||{});
+  const sig=ids.map(id=>id+'|'+fr.proofs[id].ts).join(';');
+  const [imgs,setImgs]=useState({});
+  const [tryN,setTryN]=useState(0);
+  useEffect(()=>{
+    ids.forEach(id=>{
+      const k=frPid+'/'+date+'/'+id+'|'+fr.proofs[id].ts;
+      if(cache.current[k]){ setImgs(p=>Object.assign({},p,{[id]:cache.current[k]})); return; }
+      Room.get(cfg,'photos/'+frPid+'/'+date+'/'+id)
+        .then(v=>{ if(v) cache.current[k]=v; setImgs(p=>Object.assign({},p,{[id]:v||'none'})); })
+        .catch(()=>setImgs(p=>Object.assign({},p,{[id]:'err'})));
+    });
+  },[sig,tryN]);
+  return html`<${Modal} title=${fname+'’s proofs'} icon="camera" onClose=${onClose}>
+    <p className="soft">Look at each photo. Approve it if it shows the work was done. A rejected proof costs ${PEN} XP.</p>
+    ${ids.length===0 && html`<p className="soft">No proofs yet.</p>`}
+    <div>
+      ${ids.map(id=>{
+        const pr=fr.proofs[id]; const r=((view.rev||{})[frPid]||{})[id];
+        const st=(!r||r.ts!==pr.ts)?'pending':(r.ok?'ok':'bad');
+        const d=(fr.done||[]).find(x=>x[0]===id); const title=d?d[1]:id;
+        const img=imgs[id]; const good=img&&img!=='none'&&img!=='err';
+        return html`<div key=${id} className="review-item">
+          <div className="rv-photo">${good ? html`<img src=${img} alt=${'Proof for '+title}/>` : (img==='none'?'Photo is not uploaded yet.':(img==='err'?'Could not load the photo.':'Loading photo'))}</div>
+          <div className="rv-info">
+            <b className="rv-title">${title}</b>
+            <span className="hint">${pr.ts||''}</span>
+            ${pr.note ? html`<span className="rv-note">${pr.note}</span>` : null}
+            <span className=${'status '+st}>${st==='ok'?'Approved':(st==='bad'?'Rejected, −'+PEN+' XP':'Waiting for your decision')}</span>
+            <div className="lv-actions">
+              <button type="button" className="btn primary" aria-pressed=${st==='ok'?'true':'false'} disabled=${locked} onClick=${()=>onDecide(date,id,true,pr.ts||'')}>Approve</button>
+              <button type="button" className=${'btn'+(st==='bad'?' danger':'')} aria-pressed=${st==='bad'?'true':'false'} disabled=${locked} onClick=${()=>onDecide(date,id,false,pr.ts||'')}>${'Reject (−'+PEN+' XP)'}</button>
+              ${!good && img && html`<button type="button" className="btn ghost" onClick=${()=>setTryN(tryN+1)}>Check again</button>`}
+            </div>
+          </div>
+        </div>`;
+      })}
+    </div>
+    ${locked && html`<p className="hint">This day is settled, so reviews are locked.</p>`}
+  <//>`;
+}
+
+/* ---------- live strip ---------- */
+function LiveStrip({cfg,status,fname,frProfile,rows,late,lastEnd,todayKey,onReview,onSettle,onSetup}){
+  if(!cfg){
+    return html`<section className="card live" aria-label="Live duel">
+      <div className="live-head"><h2><span className="dot-live"></span>Live duel is off</h2>
+        <button type="button" className="btn primary" onClick=${onSetup}><${Icon} name="swords" size=${16}/> Set up live room</button></div>
+      <p className="soft">Connect a room and scores, proofs and results update on both phones by themselves.</p>
+    </section>`;
+  }
+  const label=status==='live'?'Live':(status==='offline'?'Offline. Trying again.':'Connecting');
+  return html`<section className="card live" aria-label="Live duel">
+    <div className="live-head">
+      <h2><span className=${'dot-live'+(status==='live'?' on':(status==='offline'?' off':''))}></span>${'Live duel with '+fname}</h2>
+      <span className="hint">${label+(frProfile?' · '+fname+': '+(frProfile.streak|0)+' day streak':' · waiting for your friend to join')}</span>
+    </div>
+    ${rows.map(r=>{
+      const v=r.v, me=v.me, fr=v.fr, res=v.res;
+      const frN=fr?Object.keys(fr.proofs||{}).length:0;
+      let note='', can=false;
+      if(res){ note='Settled. '+(res.win==='tie'?'Tied, nobody takes a loss.':(res.win===cfg.pid?'You won.':fname+' won.')); }
+      else if(!fr){ note='Waiting for '+fname+' to start the day.'; }
+      else if(r.date===todayKey && !late){ note='Settling opens at '+fmt12(lastEnd)+'.'; }
+      else if(me.pend||fr.pend){ note=[fr.pend?'You still need to review '+fr.pend+' proof'+(fr.pend>1?'s':'')+'.':'', me.pend?fname+' still needs to review '+me.pend+'.':''].filter(Boolean).join(' '); }
+      else { can=true; note='Everything is reviewed. Ready to settle.'; }
+      return html`<div key=${r.date} className="lv-row">
+        <div className="lv-top"><span className="lv-label">${r.label}</span>
+          <span className="lv-score"><span>You <b>${me?me.eff:0}</b> XP</span><span>${fname} <b>${fr?fr.eff:0}</b> XP</span></span></div>
+        <div className="lv-meta">${(me?me.count+' of '+me.total:'0')+' blocks vs '+(fr?fr.count+' of '+fr.total:'not started')+((me&&me.rej)?' · You lost '+(me.rej*PEN)+' XP to rejected proofs':'')+((fr&&fr.rej)?' · '+fname+' lost '+(fr.rej*PEN)+' XP':'')}</div>
+        <div className="lv-actions">
+          ${frN>0 && html`<button type="button" className="btn" onClick=${()=>onReview(r.date)}><${Icon} name="camera" size=${16}/> ${fr.pend>0?'Review proofs ('+fr.pend+' waiting)':'See proofs'}</button>`}
+          ${!res && html`<button type="button" className="btn primary" disabled=${!can} onClick=${()=>onSettle(r.date)}><${Icon} name="swords" size=${16}/> Settle the day</button>`}
+        </div>
+        <p className="hint">${note}</p>
+      </div>`;
+    })}
+  </section>`;
 }
 
 /* ---------- app ---------- */
@@ -768,6 +960,11 @@ function App(){
   const [startedOn,setStartedOn]=useState(init.startedOn);
   const [sample,setSample]=useState(init.sample);
   const [proofs,setProofs]=useState(()=>prune(load(PKEY)||{}));
+  const [rc,setRc]=useState(()=>{ const s=load(CFG_KEY)||{}; return {db:DEFAULT_DB||s.db||'',room:s.room||'',pid:s.pid||rid(8)}; });
+  const [live,setLive]=useState({status:'idle',players:{},days:{},results:{},at:0});
+  const [roomErr,setRoomErr]=useState('');
+  const [roomBusy,setRoomBusy]=useState(false);
+  const [reviewDate,setReviewDate]=useState(null);
   const [tick,setTick]=useState(Date.now());
   const [sim,setSim]=useState(null);
   const [focusId,setFocusId]=useState(null);
@@ -777,9 +974,16 @@ function App(){
   const panelRef=useRef(null);
   const warned=useRef(false);
   const latest=useRef({});
+  const pullRef=useRef(null);
+  const photoCache=useRef({});
+  const uploaded=useRef({});
+
+  const cfg=(rc.room&&rc.db)?rc:null;
+  const cfgKey=cfg?cfg.db+'|'+cfg.room+'|'+cfg.pid:'';
 
   useEffect(()=>{ const t=setInterval(()=>setTick(Date.now()),1000); return ()=>clearInterval(t); },[]);
   useEffect(()=>{ save(KEY,{blocks:blocks,done:done,duel:duel,startedOn:startedOn,sample:sample}); },[blocks,done,duel,startedOn,sample]);
+  useEffect(()=>{ save(CFG_KEY,rc); },[rc]);
   useEffect(()=>{
     const ok=save(PKEY,prune(proofs));
     if(!ok && !warned.current){ warned.current=true; setToast({msg:'Browser storage is full. Photos stay until you close this page.',k:Date.now()}); }
@@ -795,6 +999,7 @@ function App(){
   const nowSec=simD.getHours()*3600+simD.getMinutes()*60+simD.getSeconds();
   const nowMin=nowSec/60;
   const todayKey=dateKey(realD);
+  const yestKey=dateKey(addDays(realD,-1));
   latest.current={nowSec:nowSec,realD:realD};
 
   const jump=min=>{
@@ -810,17 +1015,110 @@ function App(){
   const xpOf=id=>{ const b=blocks.find(x=>x.id===id); return b?b.xp:0; };
   const dayIds=key=>Object.keys(done[key]||{}).filter(id=>ids.indexOf(id)>=0);
   const doneCount=dayIds(todayKey).length;
-  const todayXp=dayIds(todayKey).reduce((s,id)=>s+xpOf(id),0);
+  const todayXpRaw=dayIds(todayKey).reduce((s,id)=>s+xpOf(id),0);
   const maxXp=sorted.reduce((s,b)=>s+b.xp,0);
-  const lifetime=Object.keys(done).reduce((s,k)=>s+dayIds(k).reduce((t,id)=>t+xpOf(id),0),0);
+  const lifetimeRaw=Object.keys(done).reduce((s,k)=>s+dayIds(k).reduce((t,id)=>t+xpOf(id),0),0);
 
   const need=Math.ceil(sorted.length/2);
   const missed=n=>{ const k=dateKey(addDays(realD,-n)); return k>=startedOn && dayIds(k).length<need; };
   const warn=missed(1)&&missed(2)&&doneCount<need;
   const okDay=n=>dayIds(dateKey(addDays(realD,-n))).length>=need;
   let streak=0; { let n=doneCount>=need?0:1; while(n<365&&okDay(n)){ streak++; n++; } }
+
+  /* live duel */
+  const players=live.players||{};
+  const frPid=cfg?(Object.keys(players).find(k=>k!==cfg.pid)||null):null;
+  const frProfile=frPid?players[frPid]:null;
+  const manualName=(duel.friend&&duel.friend.name)||'';
+  const fname=cfg?((frProfile&&frProfile.name)||'Your friend'):(manualName||'Arjun');
+  const myName=duel.myName||'';
+
+  const myStats=(()=>{
+    const pr={}, dn=[];
+    sorted.forEach(b=>{
+      if(doneToday[b.id]===undefined) return;
+      dn.push([b.id,b.title,b.xp]);
+      const p=proofsToday[b.id];
+      if(p&&p.img) pr[b.id]={ts:p.ts||'',note:p.note||''};
+    });
+    return {xp:todayXpRaw,count:doneCount,total:sorted.length,done:dn,proofs:pr};
+  })();
+  const statsKey=JSON.stringify(myStats);
+
+  const dates=[yestKey,todayKey];
+  const views={};
+  if(cfg){ dates.forEach(d=>{ views[d]=dayView(live,d,cfg.pid,frPid,d===todayKey?myStats:null); }); }
+  const myTodayRej=(cfg&&views[todayKey]&&views[todayKey].me)?views[todayKey].me.rej:0;
+  let myPenCount=0;
+  if(cfg){
+    const rs=live.results||{};
+    Object.keys(rs).forEach(d=>{ const r=rs[d]; if(r&&r.pen) myPenCount+=(r.pen[cfg.pid]|0); });
+    dates.forEach(d=>{ if(!rs[d]&&views[d]&&views[d].me) myPenCount+=views[d].me.rej; });
+  }
+  const todayXp=Math.max(0,todayXpRaw-PEN*myTodayRej);
+  const lifetime=Math.max(0,lifetimeRaw-PEN*myPenCount);
+
+  let lossMe=duel.you, lossFr=duel.arjun;
+  if(cfg){
+    lossMe=0; lossFr=0;
+    const rs=live.results||{};
+    Object.keys(rs).forEach(d=>{ const r=rs[d]; if(!r||r.win==='tie') return; if(r.win===cfg.pid) lossFr++; else lossMe++; });
+  }
   const mine={xp:todayXp,count:doneCount,total:sorted.length,streak:streak,lifetime:lifetime,done:sorted.filter(b=>doneToday[b.id]!==undefined).map(b=>[b.title,b.xp])};
-  const fname=(duel.friend&&duel.friend.name)||'Arjun';
+
+  const lastEnd=sorted.length?Math.max.apply(null,sorted.map(b=>b.end)):1425;
+  const late=nowSec>=lastEnd*60;
+  const rows=[];
+  if(cfg){ dates.forEach(d=>{ const v=views[d]; const isToday=d===todayKey; if(!isToday&&!(v.me&&v.fr&&!v.res)) return; rows.push({date:d,label:isToday?'Today':'Yesterday',v:v}); }); }
+  rows.sort((a,b)=>a.date<b.date?-1:1);
+
+  /* pull from the room every few seconds */
+  useEffect(()=>{
+    if(!cfg) return;
+    let stop=false;
+    const run=async()=>{
+      if(stop) return;
+      try{
+        const r=await Promise.all([Room.get(cfg,'players'),Room.get(cfg,'days/'+todayKey),Room.get(cfg,'days/'+yestKey),Room.get(cfg,'results')]);
+        if(stop) return;
+        const days={}; days[todayKey]=r[1]||{}; days[yestKey]=r[2]||{};
+        setLive({status:'live',players:r[0]||{},days:days,results:r[3]||{},at:Date.now()});
+      }catch(e){ if(!stop) setLive(l=>Object.assign({},l,{status:'offline'})); }
+    };
+    pullRef.current=run; run();
+    const t=setInterval(()=>{ if(!document.hidden) run(); },5000);
+    const vis=()=>{ if(!document.hidden) run(); };
+    document.addEventListener('visibilitychange',vis);
+    return ()=>{ stop=true; clearInterval(t); document.removeEventListener('visibilitychange',vis); pullRef.current=null; };
+  },[cfgKey,todayKey]);
+
+  /* push my day to the room */
+  useEffect(()=>{
+    if(!cfg) return;
+    const t=setTimeout(()=>{
+      Room.put(cfg,'days/'+todayKey+'/stats/'+cfg.pid,myStats)
+        .then(()=>Room.put(cfg,'players/'+cfg.pid,{name:myName,streak:streak,lifetime:lifetimeRaw,seen:Date.now()}))
+        .then(()=>{ if(pullRef.current) pullRef.current(); })
+        .catch(()=>setLive(l=>Object.assign({},l,{status:'offline'})));
+    },700);
+    return ()=>clearTimeout(t);
+  },[cfgKey,todayKey,statsKey,myName,streak]);
+
+  /* upload proof photos (small copies) so the other player can review them */
+  useEffect(()=>{
+    if(!cfg) return;
+    Object.keys(proofsToday).forEach(id=>{
+      const p=proofsToday[id];
+      if(!p||!p.img||doneToday[id]===undefined) return;
+      const key=todayKey+'/'+id+'/'+(p.ts||'');
+      if(uploaded.current[key]) return;
+      uploaded.current[key]=1;
+      shrink(p.img,360,0.6,s=>{
+        if(!s){ delete uploaded.current[key]; return; }
+        Room.put(cfg,'photos/'+cfg.pid+'/'+todayKey+'/'+id,s).catch(()=>{ delete uploaded.current[key]; });
+      });
+    });
+  },[cfgKey,statsKey,live.at]);
 
   const current=sorted.find(b=>nowMin>=b.start&&nowMin<b.end)||null;
   const shown=(focusId&&sorted.find(b=>b.id===focusId))||current;
@@ -871,13 +1169,63 @@ function App(){
   const saveBlock=nb=>{ setBlocks(bs=>bs.map(b=>b.id===nb.id?nb:b)); setEditId(null); say('Block updated.'); };
   const resetBlocks=()=>{ setBlocks(DEFAULTS); setEditId(null); say('Presets restored.'); };
   const startFresh=()=>{
-    setDone({}); setProofs({}); setDuel({you:0,arjun:0,arjunXp:0,settledOn:null,last:''});
+    setDone({}); setProofs({}); setDuel({you:0,arjun:0,arjunXp:0,settledOn:null,last:'',myName:duel.myName||''});
     setStartedOn(todayKey); setSample(false); say('Fresh page. Good luck.');
+  };
+
+  /* room actions */
+  const joinRoom=async(db,codeRaw,create)=>{
+    setRoomErr('');
+    const dbu=String(db||'').trim().replace(/\/+$/,'');
+    if(!dbOk(dbu)){ setRoomErr('That database link does not look right. It should start with https:// and end in firebaseio.com or firebasedatabase.app.'); return; }
+    const code=create?rid(10):String(codeRaw).toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(code.length<8){ setRoomErr('Enter the full room code.'); return; }
+    const c={db:dbu,room:code,pid:rc.pid};
+    setRoomBusy(true);
+    try{
+      const pl=(await Room.get(c,'players'))||{};
+      const n=Object.keys(pl).length;
+      if(!create && n===0){ setRoomErr('No room found with that code. Check the letters and try again.'); setRoomBusy(false); return; }
+      if(!pl[c.pid] && n>=2){ setRoomErr('That room already has two players.'); setRoomBusy(false); return; }
+      await Room.put(c,'players/'+c.pid,{name:myName,streak:streak,lifetime:lifetimeRaw,seen:Date.now()});
+      photoCache.current={}; uploaded.current={};
+      setLive({status:'idle',players:{},days:{},results:{},at:0});
+      setRc(c);
+      say(create?'Room created. Send the code to your friend.':'Joined the room.');
+    }catch(e){ setRoomErr('Could not reach the database. Check the link and your connection.'); }
+    setRoomBusy(false);
+  };
+  const leaveRoom=()=>{ setRc(Object.assign({},rc,{room:''})); setLive({status:'idle',players:{},days:{},results:{},at:0}); say('Left the room.'); };
+  const decide=async(date,id,ok,ts)=>{
+    if(!cfg||!frPid) return;
+    const rec={ok:ok,ts:ts,at:Date.now()};
+    setLive(l=>{
+      const days=Object.assign({},l.days); const d=Object.assign({},days[date]||{});
+      const rev=Object.assign({},d.rev||{}); rev[frPid]=Object.assign({},rev[frPid]||{},{[id]:rec});
+      d.rev=rev; days[date]=d; return Object.assign({},l,{days:days});
+    });
+    try{ await Room.put(cfg,'days/'+date+'/rev/'+frPid+'/'+id,rec); }
+    catch(e){ say('Could not save your decision. Check your connection.'); if(pullRef.current) pullRef.current(); }
+  };
+  const settleDay=async date=>{
+    const v=views[date];
+    if(!cfg||!frPid||!v||!v.me||!v.fr||v.res) return;
+    if(v.me.pend||v.fr.pend){ say('Finish reviewing first.'); return; }
+    const win=v.me.eff>v.fr.eff?cfg.pid:(v.me.eff<v.fr.eff?frPid:'tie');
+    const xp={}, pen={}; xp[cfg.pid]=v.me.eff; xp[frPid]=v.fr.eff; pen[cfg.pid]=v.me.rej; pen[frPid]=v.fr.rej;
+    try{
+      await Room.put(cfg,'results/'+date,{win:win,xp:xp,pen:pen,at:Date.now()});
+      say(win==='tie'?'Tied. Nobody takes a loss.':(win===cfg.pid?'You won the day.':fname+' won the day.'));
+      if(pullRef.current) pullRef.current();
+    }catch(e){ say('Could not settle. Check your connection.'); }
   };
 
   const editBlock=editId?blocks.find(b=>b.id===editId):null;
   const shownProof=shown?proofsToday[shown.id]:null;
   const shownDone=shown?doneToday[shown.id]!==undefined:false;
+  const reviewView=reviewDate?views[reviewDate]:null;
+  const room={cfg:cfg,rc:rc,busy:roomBusy,err:roomErr,frProfile:frProfile,defaultDb:DEFAULT_DB,
+    onCreate:db=>joinRoom(db,'',true),onJoin:(db,code)=>joinRoom(db,code,false),onLeave:leaveRoom};
 
   return html`<div className="page">
     <header className="top">
@@ -886,12 +1234,15 @@ function App(){
         <svg className="uline" viewBox="0 0 260 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9 C40 3 70 12 110 7 S190 4 257 8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg>
         <p className="tag">${WDL[realD.getDay()]}, ${realD.getDate()} ${MOL[realD.getMonth()]}. Start with the next hour.</p>
       </div>
-      <button type="button" className="btn" onClick=${()=>setDuelOpen(true)}><${Icon} name="swords" size=${18}/> You vs. ${fname} <span className="score">${duel.you+'–'+duel.arjun}</span></button>
+      <button type="button" className="btn" onClick=${()=>setDuelOpen(true)}><${Icon} name="swords" size=${18}/> You vs. ${fname} <span className="score">${lossMe+'–'+lossFr}</span></button>
     </header>
 
     <${TimeMachine} realSec=${realSec} nowSec=${nowSec} sim=${sim} onJump=${jump} onReset=${()=>{ setSim(null); setFocusId(null); }}/>
 
-    <${LevelBar} lifetime=${lifetime} todayXp=${todayXp} maxXp=${maxXp} doneCount=${doneCount} total=${sorted.length}/>
+    <${LevelBar} lifetime=${lifetime} todayXp=${todayXp} maxXp=${maxXp} doneCount=${doneCount} total=${sorted.length} penalty=${PEN*myTodayRej}/>
+
+    <${LiveStrip} cfg=${cfg} status=${live.status} fname=${fname} frProfile=${frProfile} rows=${rows} late=${late} lastEnd=${lastEnd} todayKey=${todayKey}
+      onReview=${setReviewDate} onSettle=${settleDay} onSetup=${()=>setDuelOpen(true)}/>
 
     ${warn && html`<section className="banner" role="alert">
       <${Icon} name="alert" size=${28}/>
@@ -924,7 +1275,10 @@ function App(){
     </footer>
 
     ${editBlock && html`<${EditModal} key=${editBlock.id} block=${editBlock} onSave=${saveBlock} onClose=${()=>setEditId(null)} onResetAll=${resetBlocks}/>`}
-    ${duelOpen && html`<${DuelModal} duel=${duel} setDuel=${setDuel} mine=${mine} todayKey=${todayKey} sample=${sample} onClose=${()=>setDuelOpen(false)} say=${say}/>`}
+    ${duelOpen && html`<${DuelModal} duel=${duel} setDuel=${setDuel} mine=${mine} todayKey=${todayKey} sample=${sample} onClose=${()=>setDuelOpen(false)} say=${say}
+      fname=${fname} lossMe=${lossMe} lossFr=${lossFr} room=${room}/>`}
+    ${reviewView && reviewView.fr && html`<${ReviewModal} date=${reviewDate} view=${reviewView} cfg=${cfg} frPid=${frPid} fname=${fname} locked=${!!reviewView.res}
+      onDecide=${decide} onClose=${()=>setReviewDate(null)} cache=${photoCache}/>`}
     ${toast && html`<div className="toast" role="status" aria-live="polite"><span>${toast.msg}</span></div>`}
   </div>`;
 }
